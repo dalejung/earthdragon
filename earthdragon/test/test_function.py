@@ -1,4 +1,9 @@
-from ..function import MultiDecorator, DuplicateWrapperError
+from ..function import (
+    MultiDecorator,
+    DuplicateWrapperError,
+    require_self,
+    RequiredSelfError
+)
 
 import nose.tools as nt
 
@@ -142,7 +147,6 @@ def test_decorator_send_ret():
     EVENTS = []
     def log_return(*args):
         ret, context = yield
-        print(context)
         EVENTS.append(ret)
 
 
@@ -188,3 +192,77 @@ def test_hook_short_circuit():
     ret = power(11)
     nt.assert_equal(ret, 121)
     nt.assert_list_equal(yield_return.events, [])
+
+
+def test_hook_staticmethod():
+    """
+    hijacking the staticmethod decorator to signal
+    that a hook should not be passed self.
+    """
+    def counter(self, *args):
+        self.count += 1
+        yield
+
+    EVENTS = []
+    @staticmethod
+    def log_greeting(greeting):
+        EVENTS.append(greeting)
+        yield
+
+    method_dec = MultiDecorator()
+    method_dec.add_hook(counter)
+    method_dec.add_hook(log_greeting)
+
+    class Greeter:
+        def __init__(self):
+            self.count = 0
+
+        @method_dec
+        def hello(self, greeting='hello'):
+            return greeting
+
+    g = Greeter()
+    g.hello('sup')
+    nt.assert_equal(g.count, 1)
+
+    g2 = Greeter()
+    g2.hello('sup2')
+    g2.hello('sup3')
+    nt.assert_equal(g2.count, 2)
+    nt.assert_list_equal(EVENTS, ['sup', 'sup2', 'sup3'])
+
+    # test that staticmethod works for non-method types
+    EVENTS.clear()
+    only_static_dec = MultiDecorator()
+    only_static_dec.add_hook(log_greeting)
+    @only_static_dec
+    def hello(greeting):
+        return greeting
+
+    hello(1)
+    hello(2)
+    nt.assert_list_equal(EVENTS, [1,2])
+
+
+def test_requires_self():
+    @require_self
+    def counter(self, *args):
+        self.count += 1
+        yield
+
+    EVENTS = []
+    @staticmethod
+    def log_greeting(greeting):
+        EVENTS.append(greeting)
+        yield
+
+    method_dec = MultiDecorator()
+    method_dec.add_hook(counter)
+    method_dec.add_hook(log_greeting)
+
+    @method_dec
+    def hello(greeting):
+        return greeting
+
+    with nt.assert_raises(RequiredSelfError):
+        hello(10)

@@ -1,5 +1,6 @@
 import inspect
 import types
+import functools
 
 from toolz import compose
 
@@ -25,6 +26,20 @@ def replace_class_closure(func, class_):
 
 class DuplicateWrapperError(Exception):
     pass
+
+class RequiredSelfError(Exception):
+    pass
+
+class require_self:
+    def __init__(self, func):
+        self.__func__ = func
+        functools.update_wrapper(self, func)
+
+    def __call__(self, *args, **kwargs):
+        return self.__func__(*args, **kwargs)
+
+source_hook = lambda hook: isinstance(hook, (require_self, staticmethod)) \
+    and hook.__func__ or hook
 
 class MultiDecorator:
     """
@@ -53,10 +68,21 @@ class MultiDecorator:
     """
     def __init__(self, func=None):
         self.orig_func = func
+        if func:
+            self._update_func_meta(func)
         self.obj = None
         self.hooks = []
         self.transforms = []
         self.pipelines = []
+
+    def _update_func_meta(self, func):
+        for attr in functools.WRAPPER_ASSIGNMENTS:
+            try:
+                value = getattr(func, attr)
+            except AttributeError:
+                pass
+            else:
+                setattr(self, attr, value)
 
     _func = None
     @property
@@ -69,8 +95,8 @@ class MultiDecorator:
         return self._func
 
     def add_hook(self, hook):
-        assert inspect.isgeneratorfunction(hook), ("Hook needs to be a"
-        "function with a single yield")
+        assert inspect.isgeneratorfunction(source_hook(hook)), \
+                ("Hook needs to be a function with a single yield")
         self.hooks.append(hook)
 
     def add_transform(self, transform):
@@ -90,19 +116,32 @@ class MultiDecorator:
         self.pipelines.append(pipeline)
 
     def __call__(self, *args, **kwargs):
+        """ this is for non-method calls """
+        return self.call(False, *args, **kwargs)
+
+    def call(self, __is_method, *args, **kwargs):
         if self.func is None:
             new_dec = self.__class__(args[0])
             new_dec.update(self)
             return new_dec
 
-        # this is a method. pass along self
-        if self.obj:
-            args = list(args)
-            args.insert(0, self.obj)
+        _hooks = []
+        for hook in self.hooks:
+            if isinstance(hook, require_self) and not __is_method:
+                msg = "{hook} expected a method call".format(hook=repr(hook))
+                raise RequiredSelfError(msg)
 
-        _hooks = [hook(*args) for hook in self.hooks]
-        for hook in _hooks:
-            next(hook, None)
+            _hook = source_hook(hook)
+            # staticmethod and method call, remove the self that is passed in
+            if isinstance(hook, staticmethod) and __is_method:
+                gen = _hook(*args[1:], **kwargs)
+            else:
+                gen = _hook(*args, **kwargs)
+
+            _hooks.append(gen)
+
+        for _hook in _hooks:
+            next(_hook, None)
 
         # pipeline
         ret = self.func(*args, **kwargs)
@@ -129,7 +168,34 @@ class MultiDecorator:
                 raise DuplicateWrapperError("Attempted to add existing func")
             self_funcs.extend(other_funcs)
 
-
+    # act like a method
     def __get__(self, obj, cls=None):
+        return MethodDecorator(self, obj)
+
+    def __repr__(self):
+        class_name = self.__class__.__name__
+        func_name = self.func and self.__name__ or 'None'
+        return "{class_name}({func_name})".format(**locals())
+
+
+class MethodDecorator:
+    """
+    Acts like types.MethodType wrapper. We need MultiDecorator
+    to know whether it's being called as method or regular
+    function.
+    """
+    def __init__(self, decorator, obj):
+        self.decorator = decorator
         self.obj = obj
-        return self
+
+    def __call__(self, *args, **kwargs):
+        return self.decorator.call(True, self.obj, *args, **kwargs)
+
+    def __getattr__(self, name):
+        if hasattr(self.decorator, name):
+            return getattr(self.decorator, name)
+        raise AttributeError(name)
+
+    def __repr__(self):
+        return "{decorator} bounded to {obj}".format(decorator=repr(self.decorator),
+                                                     obj=repr(self.obj))
