@@ -1,4 +1,4 @@
-from ..function import MultiDecorator
+from ..function import MultiDecorator, DuplicateWrapperError
 
 import nose.tools as nt
 
@@ -104,38 +104,54 @@ def test_pipeline():
     nt.assert_equal(ret[2], 1)
     nt.assert_equal(ret[3], 2)
 
-EVENTS = []
 def some_hook(*args):
-    EVENTS.append('pre')
     yield
-    EVENTS.append('post')
 
 def add_1(ret):
-    EVENTS.append(1)
     return ret + [1]
 
 def add_2(ret):
-    EVENTS.append(2)
     return ret + [2]
 
-func_dec = MultiDecorator()
-func_dec.add_hook(some_hook)
-func_dec.add_pipeline(add_1)
-func_dec.add_pipeline(add_2)
+def test_decorator_update():
+    func_dec = MultiDecorator()
+    func_dec.add_hook(some_hook)
+    func_dec.add_pipeline(add_1)
 
-@func_dec
-def duplicate(x):
-    return [x, x]
+    new_dec = MultiDecorator()
+    new_dec.add_pipeline(add_2)
+    new_dec.update(func_dec)
+    # note that new functions will be added after
+    nt.assert_list_equal(new_dec.pipelines, [add_2, add_1])
+    nt.assert_list_equal(new_dec.hooks, [some_hook])
 
-ret = duplicate('dale')
+def test_decorator_update_duplicate():
+    func_dec = MultiDecorator()
+    func_dec.add_hook(some_hook)
 
-# add_1 was added first. shoudl be exeucted first
-nt.assert_equal(EVENTS[1], 1)
-nt.assert_equal(EVENTS[2], 2)
+    new_dec = MultiDecorator()
+    new_dec.add_hook(some_hook)
+    with nt.assert_raises(DuplicateWrapperError):
+        new_dec.update(func_dec)
 
-# orig func
-nt.assert_equal(ret[0], 'dale') 
-nt.assert_equal(ret[1], 'dale')
-# pipeline
-nt.assert_equal(ret[2], 1)
-nt.assert_equal(ret[3], 2)
+def test_decorator_send_ret():
+    """
+    The yield for a hook will return the function/pipeline return
+    and a context object. context object is there for future proofing.
+    """
+    EVENTS = []
+    def log_return(*args):
+        ret, context = yield
+        print(context)
+        EVENTS.append(ret)
+
+
+    func_dec = MultiDecorator()
+    func_dec.add_hook(log_return)
+
+    @func_dec
+    def hello(val):
+        return val + 1
+
+    hello(100)
+    nt.assert_equal(EVENTS[0], 101)

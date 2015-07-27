@@ -23,6 +23,9 @@ def replace_class_closure(func, class_):
                                 closure=(make_cell(class_),))
     return new_func
 
+class DuplicateWrapperError(Exception):
+    pass
+
 class MultiDecorator:
     """
     This largely comes from the realization that:
@@ -89,9 +92,7 @@ class MultiDecorator:
     def __call__(self, *args, **kwargs):
         if self.func is None:
             new_dec = self.__class__(args[0])
-            new_dec.hooks = self.hooks[:]
-            new_dec.transforms = self.transforms[:]
-            new_dec.pipelines = self.pipelines[:]
+            new_dec.update(self)
             return new_dec
 
         # this is a method. pass along self
@@ -108,9 +109,26 @@ class MultiDecorator:
         ret = self.pipeline(ret)
 
         for hook in _hooks:
-            next(hook, None)
+            try:
+                # post hooks might someday need more data.
+                context = None
+                hook.send((ret, context))
+            except StopIteration:
+                pass
 
         return ret
+
+    def update(self, other):
+        for type_ in ['hooks', 'transforms', 'pipelines']:
+            self_funcs = getattr(self, type_)
+            other_funcs = getattr(other, type_)
+            duplicate = set(self_funcs) & set(other_funcs)
+            if duplicate:
+                # because ordering might be important, we error here
+                # till we find out how it should be handled.
+                raise DuplicateWrapperError("Attempted to add existing func")
+            self_funcs.extend(other_funcs)
+
 
     def __get__(self, obj, cls=None):
         self.obj = obj
