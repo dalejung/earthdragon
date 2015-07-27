@@ -2,7 +2,7 @@ import unittest
 
 import nose.tools as nt
 
-from ..typelets import Int, List, Dict, TypeletError, KeyTypeError
+from ..typelet import Int, List, Dict, TypeletError, KeyTypeError
 
 class V:
     pass
