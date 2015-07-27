@@ -155,3 +155,36 @@ def test_decorator_send_ret():
 
     hello(100)
     nt.assert_equal(EVENTS[0], 101)
+
+
+def test_hook_short_circuit():
+    """
+    Support having a return first in the generator, thus 
+    shortcircuiting both pre and post hook behaviors.
+    """
+    def yield_return(bob):
+        yield_return.events = []
+        if bob > 10:
+            return
+        yield_return.events.append('pre')
+        ret, context = yield
+        yield_return.events.append('post')
+        yield_return.events.append(ret)
+
+    func_dec = MultiDecorator()
+    func_dec.add_hook(yield_return)
+
+
+    @func_dec
+    def power(val):
+        return val*val
+
+    # normal
+    ret = power(10)
+    nt.assert_equal(ret, 100)
+    nt.assert_list_equal(yield_return.events, ['pre', 'post', 100])
+
+    # hit the short circuit
+    ret = power(11)
+    nt.assert_equal(ret, 121)
+    nt.assert_list_equal(yield_return.events, [])

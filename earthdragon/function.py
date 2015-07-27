@@ -102,7 +102,7 @@ class MultiDecorator:
 
         _hooks = [hook(*args) for hook in self.hooks]
         for hook in _hooks:
-            next(hook)
+            next(hook, None)
 
         # pipeline
         ret = self.func(*args, **kwargs)
