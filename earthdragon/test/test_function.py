@@ -4,6 +4,7 @@ from ..function import (
     require_self,
     static,
     nullary,
+    only_self,
     RequiredSelfError
 )
 
@@ -262,6 +263,38 @@ def test_hook_nullary():
     with nt.assert_raises_regex(TypeError, '0 positional arguments but 1 was'):
         hello('whee')
 
+def test_hook_only_self():
+    """
+    @only_self should only get self
+    """
+    @only_self
+    def counter(self):
+        self.count += 1
+        yield
+
+    method_dec = MultiDecorator()
+    method_dec.add_hook(counter)
+
+    class Greeter:
+        def __init__(self):
+            self.count = 0
+
+        @method_dec
+        def hello(self, greeting='hello'):
+            return greeting
+
+    g = Greeter()
+    g.hello('sup')
+    g.hello('hi')
+    nt.assert_equal(g.count, 2)
+
+    # make sure it errors on non methods
+    @method_dec
+    def hello(greeting):
+        return greeting
+
+    with nt.assert_raises(RequiredSelfError):
+        hello(10)
 
 def test_hook_static():
     """

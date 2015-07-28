@@ -61,6 +61,8 @@ class require_self(FunctionCategory):
 class nullary(FunctionCategory):
     pass
 
+class only_self(FunctionCategory):
+    pass
 
 class MultiDecorator:
     """
@@ -151,7 +153,7 @@ class MultiDecorator:
     def _prime_hooks(self, __is_method, *args, **kwargs):
         _hooks = []
         for hook in self.hooks:
-            if isinstance(hook, require_self) and not __is_method:
+            if isinstance(hook, (require_self, only_self)) and not __is_method:
                 msg = "{hook} expected a method call".format(hook=repr(hook))
                 raise RequiredSelfError(msg)
 
@@ -160,6 +162,8 @@ class MultiDecorator:
                 gen = hook(*args[1:], **kwargs)
             elif isinstance(hook, nullary):
                 gen = hook()
+            elif isinstance(hook, only_self):
+                gen = hook(args[0])
             else:
                 gen = hook(*args, **kwargs)
 
