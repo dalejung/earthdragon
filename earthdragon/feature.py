@@ -1,5 +1,41 @@
 from .classy import class_attrs, get_source_object, init_name
 from .function import MultiDecorator, only_self
+from .func_util import get_unbounded_super
+from .typelet import _get_name
+
+class Attribute:
+    """
+    Represents a MultiDecorator that is meant to wrap the attr name it is
+    assigned to.
+
+    This could have just been a simple wrapper and handled by a metaclass,
+    but Features have the mandate of working by themselves. So a lot
+    of the Attribute logic is support that constraint.
+    """
+    def __init__(self, decorator):
+        self.decorator = decorator
+        self.func = None
+
+    def __get__(self, obj, cls=None):
+        if self.func is None:
+            self.func = self.generate_func(obj)
+        return self.func
+
+    def generate_func(self, obj):
+        """
+        Grab base func represented by this Attibute and bind it to 
+        MultiDecorator
+        """
+        name = _get_name(self, obj)
+        # get unbound 
+        base_func = get_unbounded_super(obj, name)
+        func = self.decorator(base_func)
+        return func.__get__(obj)
+
+    def __getattr__(self, name):
+        if hasattr(self.decorator, name):
+            return getattr(self.decorator, name)
+        raise AttributeError(name)
 
 class features:
     def __init__(self, *args):

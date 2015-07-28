@@ -5,7 +5,7 @@ from ..function import (
     static,
     nullary,
     only_self,
-    RequiredSelfError
+    RequiredSelfError,
 )
 
 import nose.tools as nt

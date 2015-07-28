@@ -1,7 +1,7 @@
 import types
 from functools import wraps, reduce
 from inspect import classify_class_attrs, getclosurevars
-from .function import replace_class_closure
+from .func_util import replace_class_closure
 
 
 class MixinInvariantError(Exception):
