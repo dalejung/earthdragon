@@ -48,14 +48,13 @@ def gather_typelets(dct, bases=[]):
         typelets.update(tdict)
     return typelets
 
-def typelet_repr(self):
+def typelet_repr(self, typelets):
     """
     """
-    typelets = self._earthdragon_typelets
     class_ = self.__class__
     class_name = class_.__name__
 
-    attrs = class_._earthdragon_typelets
+    attrs = typelets
     if hasattr(class_, '__repr_attrs__'):
         attrs = getattr(class_, '__repr_attrs__')
 
