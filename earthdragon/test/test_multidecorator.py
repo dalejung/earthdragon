@@ -1,4 +1,4 @@
-from ..function import (
+from ..multidecorator import (
     MultiDecorator,
     DuplicateWrapperError,
     require_self,

@@ -1,5 +1,5 @@
 from .classy import class_attrs, get_source_object, init_name
-from .function import MultiDecorator, only_self
+from .multidecorator import MultiDecorator, only_self
 from .func_util import get_unbounded_super
 from .typelet import _get_name
 

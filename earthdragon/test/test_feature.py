@@ -1,5 +1,10 @@
 from earthdragon.typelet import Bool
-from earthdragon.function import MultiDecorator, require_self, static, only_self
+from earthdragon.multidecorator import (
+    MultiDecorator,
+    require_self,
+    static,
+    only_self
+)
 
 from .. import feature
 import imp;imp.reload(feature)

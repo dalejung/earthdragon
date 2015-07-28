@@ -5,6 +5,7 @@ import types
 
 from toolz import compose
 from .func_util import FunctionCategory
+from .context import section
 
 class DuplicateWrapperError(Exception):
     pass
@@ -12,17 +13,18 @@ class DuplicateWrapperError(Exception):
 class RequiredSelfError(Exception):
     pass
 
-class static(FunctionCategory):
-    pass
+with section("Hook Paramter Categories"):
+    class static(FunctionCategory):
+        pass
 
-class require_self(FunctionCategory):
-    pass
+    class require_self(FunctionCategory):
+        pass
 
-class nullary(FunctionCategory):
-    pass
+    class nullary(FunctionCategory):
+        pass
 
-class only_self(FunctionCategory):
-    pass
+    class only_self(FunctionCategory):
+        pass
 
 class MultiDecorator:
     """
