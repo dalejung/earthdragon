@@ -2,6 +2,8 @@ from ..function import (
     MultiDecorator,
     DuplicateWrapperError,
     require_self,
+    static,
+    nullary,
     RequiredSelfError
 )
 
@@ -193,18 +195,84 @@ def test_hook_short_circuit():
     nt.assert_equal(ret, 121)
     nt.assert_list_equal(yield_return.events, [])
 
-
-def test_hook_staticmethod():
+def test_hook_nullary():
     """
-    hijacking the staticmethod decorator to signal
-    that a hook should not be passed self.
+    @nullary marks function as 0 arity.
+    """
+    @require_self
+    def counter(self, *args):
+        self.count += 1
+        yield
+
+    EVENTS = []
+    @nullary
+    def log_greeting():
+        EVENTS.append('log_greeting')
+        yield
+
+    method_dec = MultiDecorator()
+    method_dec.add_hook(counter)
+    method_dec.add_hook(log_greeting)
+
+    class Greeter:
+        def __init__(self):
+            self.count = 0
+
+        @method_dec
+        def hello(self, greeting='hello'):
+            return greeting
+
+    g = Greeter()
+    g.hello('sup')
+    nt.assert_equal(g.count, 1)
+
+    nt.assert_list_equal(EVENTS, ['log_greeting'])
+
+
+    # test on non-method function
+    EVENTS = []
+    @nullary
+    def log_pre_post():
+        EVENTS.append('log_greeting')
+        ret, context = yield
+        EVENTS.append(ret)
+
+    null_dec = MultiDecorator()
+    null_dec.add_hook(log_pre_post)
+
+    @null_dec
+    def hello(greeting='hi'):
+        return greeting
+
+
+    hello('sup')
+    nt.assert_list_equal(EVENTS, ['log_greeting', 'sup'])
+
+
+    def bare():
+        yield
+    without_null_dec = MultiDecorator()
+    without_null_dec.add_hook(bare)
+
+    @without_null_dec
+    def hello(greeting='hi'):
+        return greeting
+
+    # without nullary, we pass in unneeded params
+    with nt.assert_raises_regex(TypeError, '0 positional arguments but 1 was'):
+        hello('whee')
+
+
+def test_hook_static():
+    """
+    @static marks function as not having self param
     """
     def counter(self, *args):
         self.count += 1
         yield
 
     EVENTS = []
-    @staticmethod
+    @static
     def log_greeting(greeting):
         EVENTS.append(greeting)
         yield
@@ -231,7 +299,7 @@ def test_hook_staticmethod():
     nt.assert_equal(g2.count, 2)
     nt.assert_list_equal(EVENTS, ['sup', 'sup2', 'sup3'])
 
-    # test that staticmethod works for non-method types
+    # test that static works for non-method types
     EVENTS.clear()
     only_static_dec = MultiDecorator()
     only_static_dec.add_hook(log_greeting)
@@ -251,7 +319,7 @@ def test_requires_self():
         yield
 
     EVENTS = []
-    @staticmethod
+    @static
     def log_greeting(greeting):
         EVENTS.append(greeting)
         yield

@@ -1,6 +1,7 @@
+import abc
+import functools
 import inspect
 import types
-import functools
 
 from toolz import compose
 
@@ -30,16 +31,36 @@ class DuplicateWrapperError(Exception):
 class RequiredSelfError(Exception):
     pass
 
-class require_self:
-    def __init__(self, func):
-        self.__func__ = func
-        functools.update_wrapper(self, func)
+class FunctionCategoryMeta(type):
+    def __new__(cls, name, bases, dct):
+        dct.setdefault('_registry', set())
+        dct['__new__'] = FunctionCategoryMeta.identity_register
+        return super().__new__(cls, name, bases, dct)
 
-    def __call__(self, *args, **kwargs):
-        return self.__func__(*args, **kwargs)
+    def identity_register(cls, func):
+        """
+        used for __new__. Instead of returning new instance we just register
+        and return func.
+        """
+        func = inspect.unwrap(func)
+        cls._registry.add(func)
+        return func
 
-source_hook = lambda hook: isinstance(hook, (require_self, staticmethod)) \
-    and hook.__func__ or hook
+    def __instancecheck__(cls, C):
+        return C in cls._registry
+
+class FunctionCategory(metaclass=FunctionCategoryMeta):
+    pass
+
+class static(FunctionCategory):
+    pass
+
+class require_self(FunctionCategory):
+    pass
+
+class nullary(FunctionCategory):
+    pass
+
 
 class MultiDecorator:
     """
@@ -66,14 +87,22 @@ class MultiDecorator:
     decoration order is if you add multiple functions of the same type. But
     it should be easier to reason about that ordering.
     """
+    orig_func = None
+
     def __init__(self, func=None):
-        self.orig_func = func
         if func:
-            self._update_func_meta(func)
+            self.set_func(func)
         self.obj = None
         self.hooks = []
         self.transforms = []
         self.pipelines = []
+
+    def set_func(self, func):
+        if self.orig_func:
+            raise Exception("func already set")
+        assert callable(func), "must wrap callable"
+        self.orig_func = func
+        self._update_func_meta(func)
 
     def _update_func_meta(self, func):
         for attr in functools.WRAPPER_ASSIGNMENTS:
@@ -95,7 +124,7 @@ class MultiDecorator:
         return self._func
 
     def add_hook(self, hook):
-        assert inspect.isgeneratorfunction(source_hook(hook)), \
+        assert inspect.isgeneratorfunction(hook), \
                 ("Hook needs to be a function with a single yield")
         self.hooks.append(hook)
 
@@ -119,26 +148,32 @@ class MultiDecorator:
         """ this is for non-method calls """
         return self.call(False, *args, **kwargs)
 
-    def call(self, __is_method, *args, **kwargs):
-        if self.func is None:
-            new_dec = self.__class__(args[0])
-            new_dec.update(self)
-            return new_dec
-
+    def _prime_hooks(self, __is_method, *args, **kwargs):
         _hooks = []
         for hook in self.hooks:
             if isinstance(hook, require_self) and not __is_method:
                 msg = "{hook} expected a method call".format(hook=repr(hook))
                 raise RequiredSelfError(msg)
 
-            _hook = source_hook(hook)
             # staticmethod and method call, remove the self that is passed in
-            if isinstance(hook, staticmethod) and __is_method:
-                gen = _hook(*args[1:], **kwargs)
+            if isinstance(hook, static) and __is_method:
+                gen = hook(*args[1:], **kwargs)
+            elif isinstance(hook, nullary):
+                gen = hook()
             else:
-                gen = _hook(*args, **kwargs)
+                gen = hook(*args, **kwargs)
 
             _hooks.append(gen)
+        return _hooks
+
+
+    def call(self, __is_method, *args, **kwargs):
+        if self.func is None:
+            new_dec = self.__class__(args[0])
+            new_dec.update(self)
+            return new_dec
+
+        _hooks = self._prime_hooks(__is_method, *args, **kwargs)
 
         for _hook in _hooks:
             next(_hook, None)
