@@ -1,9 +1,18 @@
+import types
 from functools import wraps, reduce
-from inspect import classify_class_attrs
+from inspect import classify_class_attrs, getclosurevars
+from .function import replace_class_closure
 
 
 class MixinInvariantError(Exception):
     pass
+
+class MixinMeta(type):
+    def __new__(cls, name, bases, dct):
+        init = dct.get('__init__', None)
+        if init:
+            dct['__init__'] = setup_base_init(init)
+        return super().__new__(cls, name, bases, dct)
 
 def class_attrs(cls):
     attrs = classify_class_attrs(cls)
@@ -18,9 +27,12 @@ def setup_base_init(init):
 
     @wraps(init)
     def _wrapped_init(self, *args, **kwargs):
-        init(self, *args, **kwargs)
+        base = init.__class__
         for mixin in self._mixins_:
-            mixin.__init__(self)
+            mixin_init = getattr(self, init_name(mixin), None)
+            if mixin_init:
+                mixin_init()
+        init(self, *args, **kwargs)
     _wrapped_init.__ed_init__ = True
     return _wrapped_init
 
@@ -31,6 +43,19 @@ def ensure_init_uniqueness(mixins):
             raise MixinInvariantError("Mixin inits cannot set intersecting attributes")
         return set(dct1) | set(dct2)
     reduce(no_duplicate, mixin_dicts.values())
+
+def init_name(mixin):
+    return '__init_{mixin_name}'.format(mixin_name=mixin.__name__)
+
+def get_source_object(attr, base):
+    obj = attr.defining_class.__dict__[attr.name]
+    if not isinstance(obj, types.FunctionType):
+        return obj
+
+    closurevars = getclosurevars(obj)
+    if '__class__' in closurevars.nonlocals:
+        obj = replace_class_closure(obj, base)
+    return obj
 
 def mix(base, mixin):
     """
@@ -50,16 +75,16 @@ def mix(base, mixin):
 
     _mixins_.append(mixin)
 
-    base_init = base.__init__
-    base.__init__ = setup_base_init(base_init)
-
     ensure_init_uniqueness(_mixins_)
 
     attrs = class_attrs(mixin)
-    attrs.pop('__init__', None) # handled via setup_base_init above
+    mixin_init = attrs.pop('__init__', None) # handled via setup_base_init above
+    if mixin_init:
+        attrs[init_name(mixin)] = mixin_init
     base_attrs = class_attrs(base)
 
     mixed = []
+    # need non closured function. messed up super
     for key, attr in attrs.items():
         # assuming dunder data objects are python meta attrs
         # this can be wrong. Maybe detect against base object and skip
@@ -71,6 +96,6 @@ def mix(base, mixin):
             raise MixinInvariantError("Cannot duplicate attrs names with mixins")
 
         mixed.append(key)
-        setattr(base, key, attr.object)
+        setattr(base, key, get_source_object(attr, base))
 
     setattr(base, '_mixins_', _mixins_)

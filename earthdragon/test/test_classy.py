@@ -1,10 +1,11 @@
+import unittest
+
 import nose.tools as nt
 
-from ..classy import mix, MixinInvariantError
+from ..classy import mix, MixinInvariantError, MixinMeta
 
 def test_mixin():
-
-    class Bob:
+    class Bob(metaclass=MixinMeta):
         def __init__(self):
             self.bob = 1
 
@@ -48,6 +49,7 @@ def test_duplicate_init():
     with nt.assert_raises(MixinInvariantError):
         mix(Bob, DuplicateMixin2)
 
+@unittest.expectedFailure
 def test_duplicate_init_base():
     # currently we don't error if mixin conflicts with base __init__
     # this is because we enforce empty constructor for mixins, but not
