@@ -1,4 +1,4 @@
-Lower level constucts to build upon.
+Lower level constucts to build upon. In reality, the only restriction I am placing is that all code is valid python syntax.
 
 ## pattern matching
 
