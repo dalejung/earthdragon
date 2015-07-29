@@ -367,3 +367,39 @@ def test_requires_self():
 
     with nt.assert_raises(RequiredSelfError):
         hello(10)
+
+def test_readme_example():
+    @only_self
+    def counter(self):
+        self.count += 1
+        yield
+
+    EVENTS = []
+    @static
+    def log_greeting(greeting=None):
+        ret, context = yield
+        EVENTS.append((greeting, ret))
+
+    def goodbye(ret):
+        return ret + '. goodbye'
+
+    count_and_log = MultiDecorator()
+    count_and_log.add_hook(counter)
+    count_and_log.add_hook(log_greeting)
+    count_and_log.add_pipeline(goodbye)
+
+    class Greeter:
+        def __init__(self):
+            self.count = 0
+
+        @count_and_log
+        def hello(self, greeting='hello'):
+            return greeting
+
+    g = Greeter()
+    ret = g.hello()
+    nt.assert_equal(ret, 'hello. goodbye')
+    g.hello('howdy')
+    nt.assert_list_equal(EVENTS, [(None, 'hello. goodbye'), ('howdy', 'howdy. goodbye')])
+    nt.assert_equal(g.count, 2)
+    print(EVENTS)

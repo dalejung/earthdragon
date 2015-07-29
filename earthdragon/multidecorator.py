@@ -6,12 +6,15 @@ import types
 from toolz import compose
 from .func_util import FunctionCategory
 from .context import section
+from .pattern_match import pattern
 
 class DuplicateWrapperError(Exception):
     pass
 
 class RequiredSelfError(Exception):
-    pass
+    def __init__(self, hook):
+        msg = "{hook} expected a method call".format(hook=repr(hook))
+        super().__init__(msg)
 
 with section("Hook Paramter Categories"):
     class static(FunctionCategory):
@@ -25,6 +28,23 @@ with section("Hook Paramter Categories"):
 
     class only_self(FunctionCategory):
         pass
+
+@pattern
+def munge_args(hook, is_method, args, kwargs):
+    meta [match : hook]
+
+    ~ nullary | (), {}
+    ~ static [when: is_method] | args[1:], kwargs
+    ~ only_self | args[:1], {}
+    ~ default | args, kwargs
+
+@pattern
+def hook_validate(hook, is_method, args, kwargs):
+    meta [match : hook]
+
+    ~ require_self [when: not is_method] | RequiredSelfError(hook)
+    ~ only_self [when: not is_method] | RequiredSelfError(hook)
+    ~ default | None
 
 class MultiDecorator:
     """
@@ -108,38 +128,37 @@ class MultiDecorator:
         self._pipeline = None
         self.pipelines.append(pipeline)
 
+
+    def _prime_hooks(self, __is_method, args, kwargs):
+        """
+        """
+        def _prime_hook(hook, is_method, args, kwargs):
+            err = hook_validate(hook, is_method, args, kwargs)
+            if err:
+                raise err
+
+            args, kwargs = munge_args(hook, is_method, args, kwargs)
+            return hook(*args, **kwargs)
+
+        _hooks = []
+        for hook in self.hooks:
+            gen = _prime_hook(hook, __is_method, args, kwargs)
+            _hooks.append(gen)
+        return _hooks
+
     def __call__(self, *args, **kwargs):
         """ this is for non-method calls """
         return self.call(False, *args, **kwargs)
 
-    def _prime_hooks(self, __is_method, *args, **kwargs):
-        _hooks = []
-        for hook in self.hooks:
-            if isinstance(hook, (require_self, only_self)) and not __is_method:
-                msg = "{hook} expected a method call".format(hook=repr(hook))
-                raise RequiredSelfError(msg)
-
-            # staticmethod and method call, remove the self that is passed in
-            if isinstance(hook, static) and __is_method:
-                gen = hook(*args[1:], **kwargs)
-            elif isinstance(hook, nullary):
-                gen = hook()
-            elif isinstance(hook, only_self):
-                gen = hook(args[0])
-            else:
-                gen = hook(*args, **kwargs)
-
-            _hooks.append(gen)
-        return _hooks
-
-
     def call(self, __is_method, *args, **kwargs):
+        """
+        """
         if self.func is None:
             new_dec = self.__class__(args[0])
             new_dec.update(self)
             return new_dec
 
-        _hooks = self._prime_hooks(__is_method, *args, **kwargs)
+        _hooks = self._prime_hooks(__is_method, args, kwargs)
 
         for _hook in _hooks:
             next(_hook, None)

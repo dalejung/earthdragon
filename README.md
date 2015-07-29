@@ -19,3 +19,51 @@ nt.assert_equal(multi_return(1.1), (float, 1.1, 1.1))
 with nt.assert_raises(UnhandledPatternError):
     nt.assert_equal(multi_return(0.1), (float, 1.1, 1.1))
 ```
+
+## multidecorator
+
+When wrapping a function, you often want to do one of 3 things:
+
+1. Do a pre/post call.
+2. Transform the function
+3. Modify the output of the function
+
+`Multidecorator` separates all 3 use cases. Building block for `Feature` which are like mixins but with specific logic concerning things like lifecycle events.
+
+
+```python
+@only_self
+def counter(self):
+    self.count += 1
+    yield
+
+EVENTS = []
+@static
+def log_greeting(greeting=None):
+    ret, context = yield
+    EVENTS.append((greeting, ret))
+
+def goodbye(ret):
+    return ret + '. goodbye'
+
+count_and_log = MultiDecorator()
+count_and_log.add_hook(counter)
+count_and_log.add_hook(log_greeting)
+count_and_log.add_pipeline(goodbye)
+
+class Greeter:
+    def __init__(self):
+        self.count = 0
+
+    @count_and_log
+    def hello(self, greeting='hello'):
+        return greeting
+
+g = Greeter()
+ret = g.hello()
+nt.assert_equal(ret, 'hello. goodbye')
+
+g.hello('howdy')
+nt.assert_list_equal(EVENTS, [(None, 'hello. goodbye'), ('howdy', 'howdy. goodbye')])
+nt.assert_equal(g.count, 2)
+```
