@@ -10,9 +10,18 @@ from .context import section
 from .typelet import List, Type
 
 class Pattern:
+    when = None
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    def _match(self, obj, args, kwargs):
+        if not self.match(obj):
+            return False
+        if self.when:
+            ret = self.when(*args, **kwargs)
+            return ret
+        return True
 
 _default = object()
 class DefaultPattern(Pattern):
@@ -45,6 +54,9 @@ class MultiPattern(Pattern):
         tests = zip(self.patterns, obj)
         return all(map(lambda p, o: p(o), tests))
 
+class UnhandledPatternError(Exception):
+    pass
+
 class PatternMatcher:
     match = List(str)
     patterns = List(Pattern)
@@ -67,37 +79,57 @@ class PatternMatcher:
             mvars = mvars[0]
 
         for pattern in self.patterns:
-            if pattern.match(mvars):
+            if pattern._match(mvars, args, kwargs):
                 func = self.funcs[pattern]
                 return func(*args, **kwargs)
-        raise ValueError("Not handled by PatternMatcher")
+        raise UnhandledPatternError("Not handled by PatternMatcher")
 
+def config_from_subscript(sub):
+    """
+    Convert
+    [name: "Frank", siblings: 'Bob', 'Sarah']
 
-def process_item(item):
-    if isinstance(item, ast.Slice):
-        name = unwrap(item.lower)
-        value = unwrap(item.upper)
-        return name, value
+    to:
 
-    if isinstance(item, ast.Index):
-        return None, unwrap(item.value)
-
-    raise TypeError()
-
-get_items = lambda sl: isinstance(sl, ast.ExtSlice) and sl or [sl]
-
-def get_meta(sub):
+    {
+        'name': [ast.Name(id='Frank')],
+        'siblings': [
+            ast.Name(id='Bob'),
+            ast.Name(id='Sarah'),
+        ]
+    }
+    Note: the values are still ast.AST nodes
+    """
     blocks = {}
     block = None
-    items = get_items(sub.slice)
+    items = sub.slice
+    if not isinstance(slice, ast.ExtSlice):
+        items = [items]
+
     for item in items:
         name, value = process_item(item)
         if name:
             block = blocks.setdefault(name, [])
-
         block.append(value)
-
     return blocks
+
+def process_item(item):
+    if isinstance(item, ast.Slice):
+        name = unwrap(item.lower)
+        value = item.upper
+        return name, value
+
+    if isinstance(item, ast.Index):
+        return None, item.value
+    raise TypeError()
+
+
+def get_meta(sub):
+    blocks = config_from_subscript(sub)
+    meta = {}
+    for k, vals in blocks.items():
+        meta[k] = list(map(unwrap, vals))
+    return meta
 
 def validate(meta_line, cases):
     assert meta_line == Matcher('meta[_any_]')
@@ -144,12 +176,15 @@ def split_case(node):
 class PatternBuilder:
     def __init__(self, func):
         self.func = func
+        self.func_def = func_code(func)
         self.scope = func.__globals__
+        self.argspec = inspect.getargspec(func)
 
     def build(self):
         func = self.func
-        argspec = inspect.getargspec(func)
-        func_def = func_code(func)
+        func_def = self.func_def
+        argspec = self.argspec
+
         meta_line, cases = pattern_split(func_def.body)
         meta = get_meta(meta_line.value)
         validate(meta_line, cases)
@@ -162,11 +197,21 @@ class PatternBuilder:
         return pt
 
     def process_pattern(self, pnode):
-        method_name = 'process_pattern_' + pnode.__class__.__name__
+        class_name = pnode.__class__.__name__
+        method_name = 'process_pattern_' + class_name
         method = getattr(self, method_name, None)
         if method is None:
-            raise TypeError("Unhandled type")
+            raise TypeError("Unhandled type {0}", class_name)
         return method(pnode)
+
+    def process_pattern_Name(self, pnode):
+        pval = unwrap(pnode)
+        scope = self.scope
+        if pval == 'default':
+            obj = _default
+        else:
+            obj = resolve_name(scope, pval)
+        return build_pattern(obj)
 
     def process_pattern_Name(self, pnode):
         pval = unwrap(pnode)
@@ -180,17 +225,29 @@ class PatternBuilder:
     def process_pattern_Str(self, pnode):
         return build_pattern(pnode.s)
 
+    def process_pattern_Subscript(self, pnode):
+        pattern = self.process_pattern(pnode.value)
+        b = config_from_subscript(pnode)
+        when = b.get('when')
+        if when:
+            when_func = self._return_from_template(when[0])
+            pattern.when = when_func
+        return pattern
+
     def process_case(self, line, func):
         pattern_case, pattern_return = split_case(line)
         pattern = self.process_pattern(pattern_case)
+        new_func = self._return_from_template(pattern_return)
 
-        func_def = func_code(func)
-        new_func_def = copy.deepcopy(func_def)
-        ret = ast.Return(value=pattern_return, lineno=1, col_offset=0)
-        new_func_def.body = [ret]
-
-        new_func = create_function(new_func_def, func)
         return pattern, new_func
+
+    def _return_from_template(self, expression):
+        new_func_def = copy.deepcopy(self.func_def)
+        ret = ast.Return(value=expression, lineno=1, col_offset=0)
+        new_func_def.body = [ret]
+        new_func = create_function(new_func_def, self.func)
+        return new_func
+
 
 
 def build_pattern(obj):
@@ -200,5 +257,5 @@ def build_pattern(obj):
         return InstancePattern(obj)
     if isinstance(obj, (str, int)):
         return ScalarPattern(obj)
-    raise TypeError("Unhandled type")
+    raise TypeError("Unhandled type {0}", type(obj))
 
