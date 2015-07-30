@@ -1,4 +1,5 @@
 import inspect
+import types
 
 def get_unbounded_super(obj, name):
     class_ = obj.__class__
