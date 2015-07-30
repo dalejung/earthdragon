@@ -1,27 +1,66 @@
-from .classy import class_attrs, get_source_object, init_name
+from .class_util import class_attrs, set_class_attr, init_name
 from .multidecorator import MultiDecorator, only_self
 from .func_util import get_unbounded_super
 from .typelet import _get_name
 
-class Attribute:
+"""
+1. create features decorator with Features
+2. Run FeatureMeta
+"""
+
+class Attr:
     """
     Represents a MultiDecorator that is meant to wrap the attr name it is
     assigned to.
 
     This could have just been a simple wrapper and handled by a metaclass,
     but Features have the mandate of working by themselves. So a lot
-    of the Attribute logic is support that constraint.
+    of the Attr logic is support that constraint.
+
+    Usage 1:
+        ```
+        __init__ = Attr()
+        __init__.add_hook(hook)
+        ```
+
+        When you don't have a concrete implementation but want to add a
+        hook, pipeline, or transform.
+
+        Note, we don't know which attribute name this Attr represents until
+        `__get__`. We get the attribute name at runtime by checking
+        obj.__class__.__dict__.
+
+    Usage 2:
+        ```
+        @Attr
+        def __init__(self):
+            pass
+        __init__.add_hook(hook)
+        ```
     """
-    def __init__(self, decorator):
+    def __init__(self, func=None):
+        if func is None:
+            decorator = MultiDecorator()
+        elif callable(func):
+            # @Attr
+            # def method(self): pass
+            decorator = MultiDecorator(func)
+        else:
+            raise TypeError("func must be None or Callable")
         self.decorator = decorator
         self.func = None
 
     def __get__(self, obj, cls=None):
-        if self.func is None:
-            self.func = self.generate_func(obj)
-        return self.func
+        if obj is None:
+            return self
 
-    def generate_func(self, obj):
+        if self.decorator.orig_func is None:
+            # Usage 2.
+            orig_func = self.find_func(obj)
+            self.decorator = self.decorator(orig_func)
+        return self.decorator.__get__(obj)
+
+    def find_func(self, obj):
         """
         Grab base func represented by this Attibute and bind it to 
         MultiDecorator
@@ -29,8 +68,7 @@ class Attribute:
         name = _get_name(self, obj)
         # get unbound 
         base_func = get_unbounded_super(obj, name)
-        func = self.decorator(base_func)
-        return func.__get__(obj)
+        return base_func
 
     def __getattr__(self, name):
         if hasattr(self.decorator, name):
@@ -74,33 +112,41 @@ def mix(base, feature):
     Note:
         The feature.__init__ is called at the end of BaseComponent.__init__.
     """
-    feature_name =  feature.__name__
     _features_ = getattr(base, '_features_', [])[:] # copy so we don't modify ancestor
-    if feature_name in _features_:
-        print(('{feature_name} already mixed'.format(feature_name=feature_name)))
+    if feature in _features_:
+        msg = '{feature_name} already mixed'.format(feature_name=feature_name.__name__)
+        print(msg)
         return False
 
     _features_.append(feature)
+    mix_feature(base, feature)
+    setattr(base, '_features_', _features_)
 
+def mix_feature(base, feature):
     attrs = class_attrs(feature)
-    feature_init = attrs.pop('__init__', None) # handled via setup_base_init above
-    if feature_init:
-        attrs[init_name(feature)] = feature_init
     base_attrs = class_attrs(base)
 
-    mixed = []
+    feature_init = attrs.pop('__init__', None) # handled via setup_base_init above
+    base_init = base_attrs.get('__init__', None)
+    base_init_dec = base_init['object']
+    assert isinstance(base_init_dec, MultiDecorator), 'should have been added via metaclass'
+    if feature_init:
+        if isinstance(feature_init['object'], (Attr, MultiDecorator)):
+            feature_init_object = feature_init['object']
+            base_init_dec.update(feature_init_object)
+            feature_init['object'] = feature_init_object.orig_func
+
+        attrs[init_name(feature)] = feature_init
+
     # need non closured function. messed up super
     for key, attr in attrs.items():
         # assuming dunder data objects are python meta attrs
         # this can be wrong. Maybe detect against base object and skip
         # data objects that are the same?
-        if key.startswith('__') and key.endswith('__') and attr.kind == 'data':
+        if key.startswith('__') and key.endswith('__') and attr['kind'] == 'data':
             continue
 
         if key in base_attrs:
             raise featureInvariantError("Cannot duplicate attrs names with features")
 
-        mixed.append(key)
-        setattr(base, key, get_source_object(attr, base))
-
-    setattr(base, '_features_', _features_)
+        set_class_attr(base, key, attr)

@@ -1,8 +1,7 @@
 import types
 from functools import wraps, reduce
-from inspect import classify_class_attrs, getclosurevars
 from .func_util import replace_class_closure
-
+from .class_util import class_attrs, get_bindable, init_name
 
 class MixinInvariantError(Exception):
     pass
@@ -13,13 +12,6 @@ class MixinMeta(type):
         if init:
             dct['__init__'] = setup_base_init(init)
         return super().__new__(cls, name, bases, dct)
-
-def class_attrs(cls):
-    attrs = classify_class_attrs(cls)
-    not_object_defined = lambda attr: attr.defining_class != object
-    non_object_attrs = filter(not_object_defined, attrs)
-    class_attr_dict = dict((attr.name, attr) for attr in non_object_attrs)
-    return class_attr_dict
 
 def setup_base_init(init):
     if hasattr(init, '__ed_init__'):
@@ -43,19 +35,6 @@ def ensure_init_uniqueness(mixins):
             raise MixinInvariantError("Mixin inits cannot set intersecting attributes")
         return set(dct1) | set(dct2)
     reduce(no_duplicate, mixin_dicts.values())
-
-def init_name(mixin):
-    return '__init_{mixin_name}'.format(mixin_name=mixin.__name__)
-
-def get_source_object(attr, base):
-    obj = attr.defining_class.__dict__[attr.name]
-    if not isinstance(obj, types.FunctionType):
-        return obj
-
-    closurevars = getclosurevars(obj)
-    if '__class__' in closurevars.nonlocals:
-        obj = replace_class_closure(obj, base)
-    return obj
 
 def mix(base, mixin):
     """
@@ -96,6 +75,6 @@ def mix(base, mixin):
             raise MixinInvariantError("Cannot duplicate attrs names with mixins")
 
         mixed.append(key)
-        setattr(base, key, get_source_object(attr, base))
+        setattr(base, key, get_bindable(attr, base))
 
     setattr(base, '_mixins_', _mixins_)

@@ -17,6 +17,9 @@ class RequiredSelfError(Exception):
         super().__init__(msg)
 
 with section("Hook Paramter Categories"):
+    class first(FunctionCategory):
+        pass
+
     class static(FunctionCategory):
         pass
 
@@ -111,6 +114,10 @@ class MultiDecorator:
         assert inspect.isgeneratorfunction(hook), \
                 ("Hook needs to be a function with a single yield")
         self.hooks.append(hook)
+        self.sort_hooks()
+
+    def sort_hooks(self):
+        self.hooks.sort(key=lambda x: isinstance(x, first), reverse=True)
 
     def add_transform(self, transform):
         self._func = None # unset func cache
@@ -167,7 +174,8 @@ class MultiDecorator:
         ret = self.func(*args, **kwargs)
         ret = self.pipeline(ret)
 
-        for hook in _hooks:
+        # do post hooks in reverse order
+        for hook in _hooks[::-1]:
             try:
                 # post hooks might someday need more data.
                 context = None
@@ -188,8 +196,12 @@ class MultiDecorator:
                 raise DuplicateWrapperError("Attempted to add existing func")
             self_funcs.extend(other_funcs)
 
+        self.sort_hooks()
+
     # act like a method
     def __get__(self, obj, cls=None):
+        if obj is None:
+            return self
         return MethodDecorator(self, obj)
 
     def __repr__(self):
