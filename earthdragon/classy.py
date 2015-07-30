@@ -68,7 +68,7 @@ def mix(base, mixin):
         # assuming dunder data objects are python meta attrs
         # this can be wrong. Maybe detect against base object and skip
         # data objects that are the same?
-        if key.startswith('__') and key.endswith('__') and attr.kind == 'data':
+        if key.startswith('__') and key.endswith('__') and attr['kind'] == 'data':
             continue
 
         if key in base_attrs:

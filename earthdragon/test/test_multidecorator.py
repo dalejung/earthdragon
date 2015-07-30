@@ -31,7 +31,7 @@ def test_decorator():
     sup.add_hook(cm2)
 
     sup()
-    nt.assert_list_equal(EVENTS, ['cm.pre', 'cm2.pre', 'sup', 'cm.post', 'cm2.post'])
+    nt.assert_list_equal(EVENTS, ['cm.pre', 'cm2.pre', 'sup', 'cm2.post', 'cm.post'])
 
 def test_decorator_factory():
     EVENTS = []
