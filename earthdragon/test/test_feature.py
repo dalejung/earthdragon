@@ -28,10 +28,7 @@ class Lockable:
         yield
         self._locked = True
 
-    @Attr
-    def __init__(self):
-        self._locked = True
-
+    __init__ = Attr()
     __init__.add_hook(unlock)
 
 
@@ -47,8 +44,6 @@ class Lockable:
 
     __setattr__ = Attr()
     __setattr__.add_hook(_lock_check)
-
-
 
 mutate = MultiDecorator()
 mutate.add_hook(Lockable.unlock)
@@ -77,14 +72,15 @@ class Another(metaclass=FeatureMeta):
     def bad(self, bob):
         self.bob = bob
 
-s = Something(1)
-s.change_bob(3)
-nt.assert_equal(s.bob, 3)
-with nt.assert_raises(UnexpectedMutationError):
-    s.bad(10)
+def test_lockable():
+    s = Something(1)
+    s.change_bob(3)
+    nt.assert_equal(s.bob, 3)
+    with nt.assert_raises(UnexpectedMutationError):
+        s.bad(10)
 
-with nt.assert_raises(UnexpectedMutationError):
-    s.bob = 1
+    with nt.assert_raises(UnexpectedMutationError):
+        s.bob = 1
 
-a = Another('test')
-a.change_bob(33)
+    a = Another('test')
+    a.change_bob(33)
