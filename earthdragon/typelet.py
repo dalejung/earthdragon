@@ -9,25 +9,13 @@ import uuid
 import inspect
 import datetime
 
+from .class_util import _get_name
+
 class TypeletError(Exception):
     pass
 
 class KeyTypeError(TypeletError):
     pass
-
-def _get_name(typelet, obj):
-    """
-    From a typelet object, we want to find what it's attribute name is.
-    We search the class definitions.
-    """
-    # obj can be instance or class
-    cls = inspect.isclass(obj) and obj or obj.__class__
-    for class_ in cls.__mro__:
-        classdict = class_.__dict__
-        for k,v in iteritems(classdict):
-            if v is typelet:
-                return k
-    raise Exception("Could not find name for typelet {typelet}".format(typelet=str(typelet)))
 
 def _gather_typelets(dct, key='_earthdragon_typelets'):
     if key in dct:
@@ -84,7 +72,7 @@ class Typelet:
 
     def get_name(self, obj):
         if self.name is None:
-            self.name = _get_name(self, obj)
+            self.name = _get_name(obj, self)
         return self.name
 
     def _validate(self, obj, value):

@@ -1,7 +1,6 @@
 from .class_util import class_attrs, set_class_attr, init_name
 from .multidecorator import MultiDecorator, only_self
-from .func_util import get_unbounded_super
-from .typelet import _get_name
+from .class_util import get_unbounded_super
 
 """
 1. create features decorator with Features
@@ -65,9 +64,8 @@ class Attr:
         Grab base func represented by this Attibute and bind it to 
         MultiDecorator
         """
-        name = _get_name(self, obj)
         # get unbound 
-        base_func = get_unbounded_super(obj, name)
+        base_func = get_unbounded_super(obj, self)
         return base_func
 
     def __getattr__(self, name):

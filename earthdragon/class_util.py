@@ -2,6 +2,8 @@ import types
 import inspect
 from inspect import classify_class_attrs, getclosurevars
 
+from six import iteritems
+
 from .func_util import replace_class_closure
 
 def init_name(mixin):
@@ -46,3 +48,50 @@ def set_class_attr(base, name, attr):
     """
     obj = get_bindable(attr, base)
     setattr(base, name, obj)
+
+def _get_name(obj, attr):
+    """
+    From a attr object, we want to find what it's attribute name is.
+    We search the class definitions.
+    """
+    # obj can be instance or class
+    cls = inspect.isclass(obj) and obj or obj.__class__
+    # unwrap methods to get original func
+    attr = isinstance(attr, types.MethodType) and attr.__func__ or attr
+    for class_ in cls.__mro__:
+        classdict = class_.__dict__
+        for k,v in iteritems(classdict):
+            if v is attr:
+                return k
+    raise Exception("Could not find name for attr {attr}".format(attr=str(attr)))
+
+def get_unbounded_super(obj, method):
+    """
+    obj : object
+    method : callable, str
+        Internally we want the leaf class's method and attr_name right away. We
+        can derive both by either a method/func object or an attr name.
+
+
+    obj_method : Direct method of object. Does not follow MRO.
+
+    Given an object and method, we find the method it is shadowing. This has an
+    extra bit of logic where it will skip ancestors that are the same value.
+
+    So if you copy a method two a parent and child, will skip parent and look
+    at grandparent.
+    """
+    cls = obj.__class__
+    if isinstance(method, str):
+        name = method
+        obj_method = cls.__dict__.get(method)
+    else:
+        name = _get_name(obj, method)
+        obj_method = isinstance(method, types.MethodType) and method.__func__ or method
+
+    for base in cls.mro():
+        super_method = getattr(base, name, None)
+        if super_method is not obj_method and super_method is not None:
+            break
+    return super_method
+

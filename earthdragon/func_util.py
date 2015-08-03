@@ -1,11 +1,6 @@
 import inspect
 import types
 
-def get_unbounded_super(obj, name):
-    class_ = obj.__class__
-    super_method = getattr(super(class_, class_), name)
-    return super_method
-
 def make_cell(value):
     # http://nedbatchelder.com/blog/201301/byterun_and_making_cells.html
     # Construct an actual cell object by creating a closure right here,
