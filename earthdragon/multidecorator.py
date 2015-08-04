@@ -20,6 +20,13 @@ with section("Hook Paramter Categories"):
     class first(FunctionCategory):
         pass
 
+    class system(FunctionCategory):
+        """
+        Denotes a system or platform hook. The only real change is that
+        these hooks are meant to exist in all MultiDecorators within a certain
+        context and should ignore unique constraint.
+        """
+
     class static(FunctionCategory):
         pass
 
@@ -113,7 +120,7 @@ class MultiDecorator:
     def add_hook(self, hook):
         assert inspect.isgeneratorfunction(hook), \
                 ("Hook needs to be a function with a single yield")
-        self.hooks.append(hook)
+        self._add_func(hook, 'hook')
         self.sort_hooks()
 
     def sort_hooks(self):
@@ -121,7 +128,7 @@ class MultiDecorator:
 
     def add_transform(self, transform):
         self._func = None # unset func cache
-        self.transforms.append(transform)
+        self._add_func(transform, 'transform')
         self.func # force generation of func
 
     _pipeline = None
@@ -133,7 +140,7 @@ class MultiDecorator:
 
     def add_pipeline(self, pipeline):
         self._pipeline = None
-        self.pipelines.append(pipeline)
+        self._add_func(pipeline, 'pipeline')
 
 
     def _prime_hooks(self, __is_method, args, kwargs):
@@ -190,13 +197,26 @@ class MultiDecorator:
             self_funcs = getattr(self, type_)
             other_funcs = getattr(other, type_)
             duplicate = set(self_funcs) & set(other_funcs)
-            if duplicate:
-                # because ordering might be important, we error here
-                # till we find out how it should be handled.
-                raise DuplicateWrapperError("Attempted to add existing func")
-            self_funcs.extend(other_funcs)
+            adder = getattr(self, 'add_{typ}'.format(typ=type_[:-1]))
+            for func in other_funcs:
+                adder(func)
 
         self.sort_hooks()
+
+    def _add_func(self, func, kind):
+        assert kind in ['hook', 'pipeline', 'transform']
+        existing = getattr(self, kind + 's')
+        duplicate = func in existing
+        system_type = isinstance(func, system)
+        if duplicate and not system_type:
+            # because ordering might be important, we error here
+            # till we find out how it should be handled.
+            raise DuplicateWrapperError("Attempted to add existing func")
+        if duplicate and system_type:
+            # already have system hook, do nothing
+            return
+
+        existing.append(func)
 
     # act like a method
     def __get__(self, obj, cls=None):
