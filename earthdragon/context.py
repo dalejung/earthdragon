@@ -19,7 +19,14 @@ class WithScope(object):
     def __enter__(self):
         self.frame = inspect.stack()[1][0]
         self.original = self.scope.copy()
+        return self.enter()
+
+    def enter(self):
+        # enter hook
         return self
+
+    def reload_locals(self):
+        reload_locals(self.frame)
 
     @property
     def scope(self):
@@ -67,7 +74,7 @@ class WithScope(object):
         for k in self.out['new_only']:
             del new_scope[k]
 
-        reload_locals(self.frame)
+        self.reload_locals()
 
     def __exit__(self, type, value, traceback):
         new_vars = self._gather_new_vars()
