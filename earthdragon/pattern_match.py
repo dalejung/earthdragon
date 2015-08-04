@@ -107,11 +107,14 @@ def config_from_subscript(sub):
     }
     Note: the values are still ast.AST nodes
     """
+    assert isinstance(sub, ast.Subscript)
+
     blocks = {}
     block = None
-    items = sub.slice
-    if not isinstance(slice, ast.ExtSlice):
-        items = [items]
+    if isinstance(sub.slice, ast.ExtSlice):
+        items = sub.slice.dims
+    else:
+        items = [sub.slice]
 
     for item in items:
         name, value = process_item(item)

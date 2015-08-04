@@ -11,7 +11,11 @@ import copy
 import inspect
 import nose.tools as nt
 
-from ..pattern_match import pattern, UnhandledPatternError
+from ..pattern_match import (
+    pattern,
+    UnhandledPatternError,
+    config_from_subscript
+)
 
 class Hello:
     def __init__(self, greeting):
@@ -68,3 +72,22 @@ def test_when():
     nt.assert_equal(multi_return(1.1), (float, 1.1, 1.1))
     with nt.assert_raises(UnhandledPatternError):
         nt.assert_equal(multi_return(0.1), (float, 1.1, 1.1))
+
+def test_config_from_subscript():
+    node = quick_parse("bob[match: x]").value
+    meta = config_from_subscript(node)
+    nt.assert_equal(meta['match'][0].id, 'x')
+    nt.assert_count_equal(meta, ['match'])
+
+    node = quick_parse("bob[match: x, second: 1]").value
+    meta = config_from_subscript(node)
+    nt.assert_equal(meta['match'][0].id, 'x')
+    nt.assert_equal(meta['second'][0].n, 1)
+    nt.assert_count_equal(meta, ['match', 'second'])
+
+    node = quick_parse("bob[match: x, y, second: 1]").value
+    meta = config_from_subscript(node)
+    nt.assert_equal(meta['match'][0].id, 'x')
+    nt.assert_equal(meta['match'][1].id, 'y')
+    nt.assert_equal(meta['second'][0].n, 1)
+    nt.assert_count_equal(meta, ['match', 'second'])
