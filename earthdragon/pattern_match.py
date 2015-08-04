@@ -46,6 +46,13 @@ class ScalarPattern(Pattern):
             return False
         return obj == self.value
 
+class IdentityPattern(Pattern):
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, obj):
+        return obj is self.value
+
 class MultiPattern(Pattern):
     patterns = List(Pattern)
 
@@ -213,14 +220,8 @@ class PatternBuilder:
             obj = resolve_name(scope, pval)
         return build_pattern(obj)
 
-    def process_pattern_Name(self, pnode):
-        pval = unwrap(pnode)
-        scope = self.scope
-        if pval == 'default':
-            obj = _default
-        else:
-            obj = resolve_name(scope, pval)
-        return build_pattern(obj)
+    def process_pattern_NameConstant(self, pnode):
+        return build_pattern(pnode.value)
 
     def process_pattern_Str(self, pnode):
         return build_pattern(pnode.s)
@@ -249,7 +250,6 @@ class PatternBuilder:
         return new_func
 
 
-
 def build_pattern(obj):
     if obj is _default:
         return DefaultPattern()
@@ -257,5 +257,7 @@ def build_pattern(obj):
         return InstancePattern(obj)
     if isinstance(obj, (str, int)):
         return ScalarPattern(obj)
+    if any(map(lambda t: obj is t, [None, False, True])):
+        return IdentityPattern(obj)
     raise TypeError("Unhandled type {0}", type(obj))
 
