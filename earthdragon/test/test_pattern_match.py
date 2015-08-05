@@ -14,7 +14,9 @@ import nose.tools as nt
 from ..pattern_match import (
     pattern,
     UnhandledPatternError,
-    config_from_subscript
+    config_from_subscript,
+    split_case_return,
+    split_case
 )
 
 class Hello:
@@ -91,3 +93,22 @@ def test_config_from_subscript():
     nt.assert_equal(meta['match'][1].id, 'y')
     nt.assert_equal(meta['second'][0].n, 1)
     nt.assert_count_equal(meta, ['match', 'second'])
+
+def test_split_case_return():
+    node = quick_parse("~ x | type(x), y").value
+    case_nodes, return_nodes = split_case_return(node)
+    nt.assert_equal(len(case_nodes), 1)
+    nt.assert_equal(len(return_nodes), 2)
+
+def test_multi_pattern():
+    @pattern
+    def multi(x, y):
+        meta[match: x, y]
+
+        ~ float, 3 | type(x), x, y
+        ~ int, 3 | type(x), x, 'int'
+        ~ int, int | 'INT'
+
+    nt.assert_equal(multi(1, 2), 'INT')
+    nt.assert_equal(multi(1, 3), (int, 1, 'int'))
+    nt.assert_equal(multi(1.0, 3), (float, 1, 3))

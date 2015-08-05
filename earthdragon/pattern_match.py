@@ -1,4 +1,5 @@
 import ast
+from ast import UnaryOp, BinOp, Tuple, Name
 import copy
 from functools import singledispatch
 import inspect
@@ -56,10 +57,10 @@ class IdentityPattern(Pattern):
 class MultiPattern(Pattern):
     patterns = List(Pattern)
 
-    def match(obj):
+    def match(self, obj):
         assert len(obj) == len(self.patterns)
         tests = zip(self.patterns, obj)
-        return all(map(lambda p, o: p(o), tests))
+        return all([p.match(o) for p, o in tests])
 
 class UnhandledPatternError(Exception):
     pass
@@ -163,23 +164,62 @@ def resolve_name(scope, name):
     except KeyError:
         return getattr(builtins, name)
 
+_na = object()
+def before_pipe(node):
+    if isinstance(node, ast.UnaryOp):
+        if isinstance(node.op, ast.Invert):
+            return node.operand, _na
+    if isinstance(node, ast.BinOp):
+        if isinstance(node.left, ast.UnaryOp) and isinstance(node.op, ast.BitOr):
+            return before_pipe(node.left)[0], node.right
+        if isinstance(node.op, ast.BitOr):
+            return node.left, node.right
+    raise TypeError("Unsupported node type")
+
+def after_pipe(node):
+    return _na, node
+
+def split_case_return(node):
+    elts = [node]
+
+    if isinstance(node, ast.Tuple):
+        elts = node.elts
+    found_pipe = False
+
+    case_nodes = []
+    return_nodes = []
+    grabber = before_pipe
+    for elt in elts:
+        case_bit, return_bit = grabber(elt)
+        if found_pipe: assert case_bit is _na
+
+        if not found_pipe and return_bit is not _na:
+            grabber = after_pipe
+            found_pipe = True
+
+        if case_bit is not _na:
+            case_nodes.append(case_bit)
+
+        if return_bit is not _na:
+            return_nodes.append(return_bit)
+
+    return case_nodes, return_nodes
+
 def split_case(node):
     if isinstance(node, ast.Expr):
         node = node.value
-    # ~ x | x
-    if isinstance(node, ast.BinOp):
-        pattern_case = node.left.operand
-        pattern_return = node.right
-    elif isinstance(node, ast.Tuple) and isinstance(node.elts[0], ast.BinOp):
-        pattern_case, pattern_return = split_case(node.elts[0])
-        elts = [pattern_return]
-        for elt in node.elts[1:]:
-            elts.append(elt)
+
+    case_nodes, return_nodes = split_case_return(node)
+
+    pattern_case = case_nodes
+    if len(case_nodes) == 1:
+        pattern_case = case_nodes[0]
+
+    pattern_return = return_nodes[0]
+    if len(return_nodes) > 1:
         pattern_return = ast.fix_missing_locations(
-            ast.Tuple(elts=elts, ctx=ast.Load())
+            ast.Tuple(elts=return_nodes, ctx=ast.Load())
         )
-    else:
-        raise Exception("Unhandled Case form")
 
     return pattern_case, pattern_return
 
@@ -229,6 +269,9 @@ class PatternBuilder:
     def process_pattern_Str(self, pnode):
         return build_pattern(pnode.s)
 
+    def process_pattern_Num(self, pnode):
+        return build_pattern(pnode.n)
+
     def process_pattern_Subscript(self, pnode):
         pattern = self.process_pattern(pnode.value)
         b = config_from_subscript(pnode)
@@ -237,6 +280,14 @@ class PatternBuilder:
             when_func = self._return_from_template(when[0])
             pattern.when = when_func
         return pattern
+
+    def process_pattern_list(self, pnode):
+        patterns = []
+        for node in pnode:
+            pattern = self.process_pattern(node)
+            patterns.append(pattern)
+
+        return MultiPattern(patterns=patterns)
 
     def process_case(self, line, func):
         pattern_case, pattern_return = split_case(line)
