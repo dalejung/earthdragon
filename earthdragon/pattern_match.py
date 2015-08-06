@@ -151,7 +151,14 @@ def validate(meta_line, cases):
         pass
 
 def pattern_split(lines):
-    return lines[0], lines[1:]
+    for i, line in enumerate(lines):
+        val = line.value
+        if isinstance(val, ast.Subscript):
+            break
+        if isinstance(val, ast.Str):
+            continue
+        raise TypeError("Pattern match function must start with str or meta")
+    return lines[i], lines[i+1:]
 
 def pattern(func):
     builder = PatternBuilder(func)

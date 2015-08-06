@@ -112,3 +112,11 @@ def test_multi_pattern():
     nt.assert_equal(multi(1, 2), 'INT')
     nt.assert_equal(multi(1, 3), (int, 1, 'int'))
     nt.assert_equal(multi(1.0, 3), (float, 1, 3))
+
+def test_pattern_match_doc():
+    @pattern
+    def docstring(x, y):
+        """
+        doc string
+        """
+        meta[match: x, y]
