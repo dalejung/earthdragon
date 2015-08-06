@@ -1,6 +1,7 @@
 from earthdragon.class_util import get_unbounded_super
 from earthdragon.multidecorator import MultiDecorator
 
+# TODO make this lockable
 class Attr:
     """
     Represents a MultiDecorator that is meant to wrap the attr name it is
@@ -76,3 +77,20 @@ class Attr:
         base_func = get_unbounded_super(obj, self)
         return base_func
 
+    @classmethod
+    def combine(cls, *attrs):
+        """
+        Take a list of attrs and merge them into a new Attr. It is assumed
+        that the ordering is from base -> leaf so the last function is used
+        as the Attr.func
+        """
+        new_attr = cls()
+        last_func = None
+        for attr in attrs:
+            if attr.orig_func:
+                last_func = attr.func
+            new_attr.update(attr)
+
+        if last_func:
+            new_attr.set_func(last_func)
+        return new_attr
