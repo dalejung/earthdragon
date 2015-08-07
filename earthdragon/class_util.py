@@ -23,7 +23,7 @@ def class_attrs(cls):
     class_attr_dict = dict((attr.name, dict(attr.__dict__)) for attr in non_object_attrs)
     return class_attr_dict
 
-def get_bindable(attr, base):
+def get_bindable(obj, base):
     """
     attr : dict of inspect.Attribute
     base : type
@@ -32,7 +32,6 @@ def get_bindable(attr, base):
     class. Largely this deals with Python 3 and super() binding
     the class via a closure.
     """
-    obj = attr['object']
     if not isinstance(obj, types.FunctionType):
         return obj
 
@@ -81,7 +80,10 @@ def get_unbounded_super(obj, method):
     So if you copy a method two a parent and child, will skip parent and look
     at grandparent.
     """
-    cls = obj.__class__
+    cls = obj
+    if not isinstance(cls, type):
+        cls = obj.__class__
+
     if isinstance(method, str):
         name = method
         obj_method = cls.__dict__.get(method)
@@ -89,9 +91,9 @@ def get_unbounded_super(obj, method):
         name = _get_name(obj, method)
         obj_method = isinstance(method, types.MethodType) and method.__func__ or method
 
-    for base in cls.mro():
+    for base in cls.mro()[1:]:
         super_method = getattr(base, name, None)
         if super_method is not obj_method and super_method is not None:
             break
-    return super_method
+    return base, super_method
 

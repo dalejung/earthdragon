@@ -1,4 +1,4 @@
-from ..class_util import get_unbounded_super
+from ..class_util import get_unbounded_super, set_class_attr
 import nose.tools as nt
 
 def test_get_unbounded_super():
@@ -19,7 +19,7 @@ def test_get_unbounded_super():
 
     c = Child()
     attr = c.__init__
-    meth = get_unbounded_super(c, attr)
+    owner, meth = get_unbounded_super(c, attr)
     nt.assert_is(meth, object.__init__)
 
     class Parent:
@@ -32,31 +32,64 @@ def test_get_unbounded_super():
 
     c = Child()
     attr = c.__init__
-    meth = get_unbounded_super(c, attr)
+    owner, meth = get_unbounded_super(c, attr)
     nt.assert_is(meth, Parent.__init__)
 
-    meth = get_unbounded_super(c, '__init__')
+    owner, meth = get_unbounded_super(c, '__init__')
     nt.assert_is(meth, Parent.__init__)
 
-class Parent:
-    def __init__(self, bob):
-        super().__init__()
+def test_set_class_attr():
+    class Parent:
+        pass
 
-    def hi(self):
-        print('parent hi')
+    class Surrogate:
+        def hello(self, greeting):
+            print(greeting)
+            # super causes hello() to gain a closure
+            super()
 
-class Surrogate:
-    def hello(self, greeting):
-        print(greeting)
-        # super causes hello() to gain a closure
-        super()
+    p = Parent()
 
-class Child(Parent):
-    def hi(self):
-        print('child hi')
-        super().hi()
+    setattr(Parent, 'hello', Surrogate.hello)
+    with nt.assert_raises(TypeError):
+        p.hello('hi')
 
-setattr(Parent, 'hello', Surrogate.hello)
+    set_class_attr(Parent, 'hello', Surrogate.hello)
+    p.hello('hi')
 
-p = Parent(1)
-c = Child(2)
+def test_unbounded_super():
+    class GrandParent:
+        def hi(self):
+            print('grandparent hi')
+
+    class Parent(GrandParent):
+        def __init__(self, bob):
+            super().__init__()
+
+        def hi(self):
+            print('parent hi')
+
+    class Child(Parent):
+        def hi(self):
+            print('child hi')
+            super().hi()
+
+    c = Child(1)
+    owner, meth = get_unbounded_super(c, 'hi')
+    nt.assert_is(owner, Parent)
+    nt.assert_is(meth, Parent.hi)
+
+    owner, meth = get_unbounded_super(Child, 'hi')
+    nt.assert_is(owner, Parent)
+    nt.assert_is(meth, Parent.hi)
+    owner, meth = get_unbounded_super(Parent, 'hi')
+    nt.assert_is(owner, GrandParent)
+    nt.assert_is(meth, GrandParent.hi)
+
+    owner, meth = get_unbounded_super(GrandParent, 'hi')
+    nt.assert_is(owner, object)
+    nt.assert_is(meth, None)
+
+    owner, meth = get_unbounded_super(GrandParent, '__init__')
+    nt.assert_is(owner, object)
+    nt.assert_is(meth, object.__init__)
