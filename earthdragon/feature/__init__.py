@@ -1,8 +1,10 @@
 from ..class_util import class_attrs, set_class_attr, init_name
 from ..multidecorator import MultiDecorator, only_self, system
 from ..pattern_match import pattern
+from .anchor import propogate_anchor
 
 from .attr import Attr
+from types import FunctionType
 
 class features:
     def __init__(self, *args):
@@ -22,43 +24,12 @@ def run_feature_inits(self):
         if feature_init:
             feature_init()
 
-@pattern
-def _wrap_anchor(init):
-    meta [match : init]
-
-    ~ None | Attr()
-    ~ Attr | init
-    ~ default | Attr(init)
-
 class FeatureMeta(type):
     def __new__(cls, name, bases, dct):
-        parent_init = parent_anchor(bases, '__init__')
-
-        init = dct.get('__init__')
-        wrapped = _wrap_anchor(init)
-
-        new_init = wrapped
-        new_init.add_hook(run_feature_inits)
-        if isinstance(parent_init, Attr):
-            assert isinstance(init, Attr) or init is None
-            new_init = Attr()
-            new_init.update(parent_init)
-            new_init.update(wrapped)
-            new_init.func = wrapped.func
-
+        preprocess = lambda parent, child: child.add_hook(run_feature_inits)
+        new_init = propogate_anchor(dct, bases, '__init__', preprocess)
         dct['__init__'] = new_init
         return super().__new__(cls, name, bases, dct)
-
-def propogate(dct, bases, func_name):
-    """
-    """
-    parent_init = parent_anchor(bases, func_name)
-    func = dct.get(func_name)
-
-def parent_anchor(bases, hook_name):
-    for base in bases:
-        return base.__dict__[hook_name]
-
 
 class Feature(metaclass=FeatureMeta):
     __init__ = Attr()

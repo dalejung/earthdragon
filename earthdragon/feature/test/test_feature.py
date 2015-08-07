@@ -8,8 +8,8 @@ from earthdragon.multidecorator import (
 )
 
 import nose.tools as nt
-from .. import feature
-from ..feature import *
+from ... import feature
+from ...feature import *
 from earthdragon.context import WithScope
 
 class ns(WithScope):
@@ -37,7 +37,7 @@ class BareFeature:
         yield
 
     # what we are saying here is tht we want to wrap __init__
-    # but we do not provide an init
+    # but we do nmot provide an init
     __init__ = Attr()
     __init__.add_hook(touch_init)
 
@@ -60,5 +60,15 @@ class NoInit(metaclass=FeatureMeta):
 class Frank(NoInit):
     pass
 
+# should get it's own copy
+nt.assert_is_not(NoInit.__init__, Frank.__init__)
+
 o = NoInit()
 f = Frank()
+nt.assert_equal(o.touched, True)
+nt.assert_not_in('woot', o.__dict__)
+
+nt.assert_equal(f.touched, True)
+nt.assert_in('woot', f.__dict__)
+nt.assert_equal(f.woot, True)
+
