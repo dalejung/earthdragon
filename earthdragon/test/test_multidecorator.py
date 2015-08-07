@@ -403,3 +403,33 @@ def test_readme_example():
     nt.assert_list_equal(EVENTS, [(None, 'hello. goodbye'), ('howdy', 'howdy. goodbye')])
     nt.assert_equal(g.count, 2)
     print(EVENTS)
+
+
+def test_combine_func():
+    a = MultiDecorator(lambda x: x+1)
+    b = MultiDecorator(lambda x: x+2)
+    c = MultiDecorator.combine(a, b)
+
+    # func should have proogated
+    nt.assert_true(c.orig_func)
+    nt.assert_equal(c(1), 3)
+
+    # switch order
+    d = MultiDecorator.combine(b, a)
+    nt.assert_equal(d(1), 2)
+
+    # add attr without func
+    f = MultiDecorator.combine(b, a, MultiDecorator())
+    nt.assert_equal(f(1), 2)
+
+def test_combine_pipeline():
+    a = MultiDecorator(lambda x: x+1)
+    a.add_pipeline(lambda x: x**x)
+    b = MultiDecorator(lambda x: x+2)
+    b.add_pipeline(lambda x: x-10)
+
+    c = MultiDecorator.combine(a, b)
+
+    # should be equivalent of ((x + 2) ** (x + 2) - 10)
+    correct = lambda x: ((x + 2) ** (x + 2) - 10)
+    nt.assert_equal(c(10), correct(10))

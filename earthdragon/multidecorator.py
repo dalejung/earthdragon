@@ -229,6 +229,24 @@ class MultiDecorator:
         func_name = self.func and self.__name__ or 'None'
         return "{class_name}({func_name})".format(**locals())
 
+    @classmethod
+    def combine(cls, *decos):
+        """
+        Take a list of decs and merge them into a new Attr. It is assumed
+        that the ordering is from base -> leaf so the last function is used
+        as the Attr.func
+        """
+        new_deco = cls()
+        last_func = None
+        for deco in decos:
+            if deco.orig_func:
+                last_func = deco.func
+            new_deco.update(deco)
+
+        if last_func:
+            new_deco.set_func(last_func)
+        return new_deco
+
 
 class MethodDecorator:
     """

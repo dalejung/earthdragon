@@ -84,13 +84,6 @@ class Attr:
         that the ordering is from base -> leaf so the last function is used
         as the Attr.func
         """
-        new_attr = cls()
-        last_func = None
-        for attr in attrs:
-            if attr.orig_func:
-                last_func = attr.func
-            new_attr.update(attr)
-
-        if last_func:
-            new_attr.set_func(last_func)
-        return new_attr
+        decorators = [attr.decorator for attr in attrs]
+        deco = MultiDecorator.combine(*decorators)
+        return cls(deco)
