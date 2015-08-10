@@ -171,13 +171,13 @@ def anchor_updates(dct, bases):
     anchor_funcs = aggregate_anchor_funcs(dct)
     dct.update(anchor_funcs)
 
-    propogated_anchors = aggregate_parent_anchors(dct, bases)
-    anchor_funcs.update(propogated_anchors)
+    if bases:
+        propogated_anchors = aggregate_parent_anchors(dct, bases)
+        anchor_funcs.update(propogated_anchors)
     return anchor_funcs
 
 class AnchorMeta(MetaMeta):
     def __new__(cls, name, bases, dct):
-        if bases:
-            update = anchor_updates(dct, bases)
-            dct.update(update)
+        update = anchor_updates(dct, bases)
+        dct.update(update)
         return super().__new__(cls, name, bases, dct)

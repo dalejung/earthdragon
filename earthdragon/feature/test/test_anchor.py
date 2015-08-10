@@ -82,6 +82,10 @@ def test_anchor_meta():
             self.logs.append(msg)
             yield
 
+        @pipeline('shout')
+        def echo(msg):
+            return msg + msg
+
     class Blah3(Blah2):
         @hook('shout')
         def log3(self, msg):
@@ -93,9 +97,52 @@ def test_anchor_meta():
             self.init_args = list(args)
             yield
 
+    b2 = Blah2(3)
+    nt.assert_not_in('init_args', b2.__dict__)
+    ret = b2.shout('hi')
+    nt.assert_equal(ret, 'hihi')
 
     b3 = Blah3(3)
     nt.assert_list_equal(b3.init_args, [3])
-    b3.shout('hi')
+    ret = b3.shout('hi')
+    nt.assert_equal(ret, 'hihi')
     nt.assert_list_equal(b3.logs, ['hi', 'hi2'])
     nt.assert_list_equal(b3.shout.hooks, [Blah2.log.func, Blah3.log3.func])
+
+def test_anchor_meta_single():
+    """ test using attr and hooks on a single class """
+    class Single(metaclass=AnchorMeta):
+        @Attr
+        def hooked(self, what):
+            self.what = what
+            return what
+
+        @hook('hooked')
+        def hookhook(self, what):
+            self.pre_what = what
+            ret, context = yield
+            self.post_what = ret
+
+        @pipeline('hooked')
+        def first_letter(what):
+            return what[0]
+
+
+    obj = Single()
+    ret = obj.hooked('word')
+    nt.assert_equal(ret, 'w')
+    nt.assert_equal(obj.pre_what, 'word')
+    nt.assert_equal(obj.post_what, 'w')
+
+
+def test_anchor_meta_incorrect_order():
+    with nt.assert_raises(AnchorFuncError):
+        class SingleError(metaclass=AnchorMeta):
+            @hook('hooked')
+            def hookhook(self, what):
+                ret, context = yield
+
+            @Attr
+            def hooked(self, what):
+                return what
+
