@@ -30,3 +30,22 @@ def test_combine_pipeline():
     # should be equivalent of ((x + 2) ** (x + 2) - 10)
     correct = lambda x: ((x + 2) ** (x + 2) - 10)
     nt.assert_equal(c.decorator(10), correct(10))
+
+def test_combine_empty_attr():
+    a = Attr()
+    b = Attr()
+    c = Attr.combine(a, b)
+    nt.assert_is_none(c.decorator.orig_func)
+
+class GrandFather:
+    def a(self):
+        return 1
+
+class Parent(GrandFather):
+    a = Attr()
+
+class Child(Parent):
+    a = Attr()
+
+c = Child()
+c.a()

@@ -35,6 +35,8 @@ class Attr:
     def __init__(self, func=None):
         if func is None:
             decorator = MultiDecorator()
+        elif isinstance(func, MultiDecorator):
+            decorator = func.copy()
         elif callable(func):
             # @Attr
             # def method(self): pass
@@ -42,6 +44,7 @@ class Attr:
         else:
             raise TypeError("func must be None or Callable")
         self.decorator = decorator
+
         if isinstance(func, Attr):
             self.update(func)
 
@@ -50,7 +53,12 @@ class Attr:
         self.decorator.update(other.decorator)
 
     def __getattr__(self, name):
-        if hasattr(self.decorator, name):
+        passthrough = {
+            'hooks', 'pipelines', 'transforms',
+            'add_hook', 'add_pipeline', 'add_transform',
+            'orig_func'
+        }
+        if name in passthrough:
             return getattr(self.decorator, name)
         raise AttributeError(name)
 
@@ -60,21 +68,26 @@ class Attr:
 
         if self.decorator.orig_func is None:
             # Usage 2.
-            orig_func = self.find_func(obj)
-
-            if isinstance(orig_func, Attr):
-                orig_func = orig_func.func
-
-            self.decorator = self.decorator(orig_func)
+            orig_func = self._find_func(obj)
+            self.set_func(orig_func)
         return self.decorator.__get__(obj)
 
-    def find_func(self, obj):
+    def set_func(self, func):
+        self.decorator = self.decorator(func)
+
+    def _find_func(self, obj):
         """
-        Grab base func represented by this Attibute and bind it to 
+        Grab base func represented by this Attibute and bind it to
         MultiDecorator
         """
         # get unbound
-        base_func = get_unbounded_super(obj, self)
+        owner, base_func = get_unbounded_super(obj, self)
+        if isinstance(base_func, Attr):
+            base_func = base_func._find_func(owner)
+
+        if isinstance(base_func, MultiDecorator):
+            base_func = base_func.orig_func
+
         return base_func
 
     @classmethod
