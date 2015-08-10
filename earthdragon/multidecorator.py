@@ -247,6 +247,9 @@ class MultiDecorator:
             new_deco.set_func(last_func)
         return new_deco
 
+    def copy(self):
+        return self.combine(self)
+
 
 class MethodDecorator:
     """
