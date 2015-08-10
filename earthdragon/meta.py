@@ -9,16 +9,17 @@ def reload_locals(frame):
     ctypes.pythonapi.PyFrame_LocalsToFast(ctypes.py_object(frame), ctypes.c_int(1))
 
 class MetaDict(OrderedDict):
-    def __init__(self, setitem_handler):
+    def __init__(self, setitem_handler, *args, **kwargs):
         self.setitem_handler = setitem_handler
         self.classdict = ClassDict(self)
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def __setitem__(self, key, value):
-        ret = self.setitem_handler(key, value, self.classdict)
-        if ret is False:
-            return
         super().__setitem__(key, value)
+
+    def copy(self):
+        return self.__class__(self.setitem_handler, self)
+
 
 class ClassDict:
     """ simple obj to limit interface to MetaDict """
@@ -47,8 +48,7 @@ class MetaMeta(type):
         return mdict
 
     def setitem_handler(key, value, scope):
-        # raise NotImplementedError?
-        pass
+        return True
 
 def mro(dct, bases, name):
     class_dicts = [base.__dict__ for base in bases] + [dct]
