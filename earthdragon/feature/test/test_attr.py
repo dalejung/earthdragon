@@ -37,15 +37,25 @@ def test_combine_empty_attr():
     c = Attr.combine(a, b)
     nt.assert_is_none(c.decorator.orig_func)
 
-class GrandFather:
-    def a(self):
-        return 1
+def test_find_orig_func():
+    class GrandFather:
+        def a(self):
+            return 1
 
-class Parent(GrandFather):
-    a = Attr()
+    class Parent(GrandFather):
+        a = Attr()
+        a.add_pipeline(lambda x: x+2)
 
-class Child(Parent):
-    a = Attr()
+    class Child(Parent):
+        a = Attr()
+        a.add_pipeline(lambda x: x+1)
 
-c = Child()
-c.a()
+    p = Parent()
+    nt.assert_equal(p.a(), 3)
+
+    # note that the pipeline does not cascade
+    # Attr only finds the original func.
+    # the propogate is done via metaclass
+    # this behavior could change...
+    c = Child()
+    nt.assert_equal(c.a(), 2)
