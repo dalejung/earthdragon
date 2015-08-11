@@ -84,4 +84,4 @@ def mix_feature(base, feature):
         if key in base_attrs:
             raise FeatureInvariantError("Cannot duplicate attrs names with features")
 
-        set_class_attr(base, key, attr)
+        set_class_attr(base, key, attr['object'])
