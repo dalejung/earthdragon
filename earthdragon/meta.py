@@ -15,6 +15,9 @@ class MetaDict(OrderedDict):
         super().__init__(*args, **kwargs)
 
     def __setitem__(self, key, value):
+        ret = self.setitem_handler(key, value, self.classdict)
+        if ret is False:
+            return
         super().__setitem__(key, value)
 
     def copy(self):
