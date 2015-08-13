@@ -114,9 +114,34 @@ def test_multi_pattern():
     nt.assert_equal(multi(1.0, 3), (float, 1, 3))
 
 def test_pattern_match_doc():
+    # should ignore doc string.
     @pattern
     def docstring(x, y):
         """
         doc string
         """
         meta[match: x, y]
+
+def test_pattern_match_object():
+    # test again object() sentinels
+    _missing = object()
+
+    @pattern
+    def match(x):
+        meta[match: x]
+
+        ~ _missing | "MISSING"
+        ~ default | x
+
+    nt.assert_equal(match(_missing), "MISSING")
+    nt.assert_equal(match(100), 100)
+
+    @pattern
+    def multimatch(x, y):
+        meta[match: x, y]
+
+        ~ 1, _missing | x, "MISSING"
+        ~ default | x, y
+
+    nt.assert_equal(multimatch(1, _missing), (1, "MISSING"))
+    nt.assert_equal(multimatch(_missing, 100), (_missing, 100))

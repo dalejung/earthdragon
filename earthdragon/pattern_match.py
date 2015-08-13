@@ -47,6 +47,13 @@ class ScalarPattern(Pattern):
             return False
         return obj == self.value
 
+class ValuePattern(Pattern):
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, obj):
+        return obj == self.value
+
 class IdentityPattern(Pattern):
     def __init__(self, value):
         self.value = value
@@ -320,5 +327,7 @@ def build_pattern(obj):
         return ScalarPattern(obj)
     if any(map(lambda t: obj is t, [None, False, True])):
         return IdentityPattern(obj)
+    if type(obj) == object:
+        return ValuePattern(obj)
     raise TypeError("Unhandled type {0}", type(obj))
 
