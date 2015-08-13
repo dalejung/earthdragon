@@ -107,3 +107,53 @@ class Lockable:
 mutate = MultiDecorator()
 mutate.add_hook(Lockable.unlock)
 ```
+
+# Navel
+
+Building block. Features to include:
+
+* Mutations must be annotated.
+* Event sourcing
+* Ability to type check based on {name:type} specification.
+
+```python
+from earthdragon.navel import Navel, mutate
+
+class Hippo(Navel):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def bad_change_x(self, x):
+        self.x = x
+
+    @mutate
+    def good_change_x(self, x):
+        self.x = x
+
+hip = Hippo(3, 10)
+with nt.assert_raises(UnexpectedMutationError):
+    hip.x = 30
+with nt.assert_raises(UnexpectedMutationError):
+    hip.bad_change_x(10)
+# unchanged
+nt.assert_equal(hip.x, 3)
+
+# huzzah
+hip.good_change_x(100)
+nt.assert_equal(hip.x, 100)
+```
+
+```python
+class Logging(Navel):
+  @hook('__setattr__')
+  def log_set(self, name, value):
+      print(name, value)
+      yield
+
+class SomeObject(Logging):
+    def __init__(self, x):
+        self.x = x
+
+o = SomeObject(1) # x, 1
+```
