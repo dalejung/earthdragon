@@ -242,7 +242,7 @@ class MultiDecorator:
         last_func = None
         for deco in decos:
             if deco.orig_func:
-                last_func = deco.func
+                last_func = deco.orig_func
             new_deco.update(deco)
 
         if last_func:

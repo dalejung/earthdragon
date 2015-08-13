@@ -434,6 +434,27 @@ def test_combine_pipeline():
     correct = lambda x: ((x + 2) ** (x + 2) - 10)
     nt.assert_equal(c(10), correct(10))
 
+def test_combine_last_func_method():
+    def transform(func):
+        assert func.__qualname__.endswith('Bob.func'), "should transform orig_func"
+        from asttools import create_function, get_source
+        print(get_source(func))
+        return create_function("def bob(x): return x", func)
+
+    class Bob:
+        def func(x):
+            return x + 1
+
+    a = MultiDecorator()
+    a.add_transform(transform)
+    a.set_func(Bob.func)
+    b = MultiDecorator()
+
+    # after comibing two MultiDecorator, c should point to the original func
+    c = MultiDecorator.combine(a, b)
+    c.func
+
+
 
 def test_add_transform():
     def identity(func):
