@@ -17,12 +17,14 @@ class features:
 @system
 @only_self
 def run_feature_inits(self):
-    yield
-    # after main init. run the feature inits.
+    # run feature inits first. Likely need to setup vars
+    # TODO either split this into pre/post, or i can just 
+    # rely on regular hooks for post_init logic
     for feature in self._features_:
         feature_init = getattr(self, init_name(feature), None)
         if feature_init:
             feature_init()
+    yield
 
 class FeatureMeta(AnchorMeta):
     def __new__(cls, name, bases, dct):
