@@ -2,8 +2,6 @@ import types
 import inspect
 from inspect import classify_class_attrs, getclosurevars
 
-from six import iteritems
-
 from .func_util import replace_class_closure
 
 def init_name(mixin):
@@ -59,7 +57,7 @@ def _get_name(obj, attr):
     attr = isinstance(attr, types.MethodType) and attr.__func__ or attr
     for class_ in cls.__mro__:
         classdict = class_.__dict__
-        for k,v in iteritems(classdict):
+        for k,v in classdict.items():
             if v is attr:
                 return k
     raise Exception("Could not find name for attr {attr}".format(attr=str(attr)))

@@ -3,7 +3,6 @@ Type checking primitives. Traits is an overloaded term. Came up with Typelets
 ala IPython Traitlets.
 """
 from collections import deque, OrderedDict
-from six import iteritems, with_metaclass
 import inspect
 import uuid
 import inspect
@@ -22,7 +21,7 @@ def _gather_typelets(dct, key='_earthdragon_typelets'):
         return dct[key]
 
     typelets = OrderedDict()
-    for k, v in iteritems(dct):
+    for k, v in dct.items():
         if isinstance(v, Typelet):
             typelets[k] = v
     return typelets
