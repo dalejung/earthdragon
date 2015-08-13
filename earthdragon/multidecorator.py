@@ -129,7 +129,6 @@ class MultiDecorator:
     def add_transform(self, transform):
         self._func = None # unset func cache
         self._add_func(transform, 'transform')
-        self.func # force generation of func
 
     _pipeline = None
     @property
