@@ -12,24 +12,12 @@ from ... import feature
 from ...feature import *
 from earthdragon.context import WithScope
 
-class ns(WithScope):
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs
-        super().__init__()
-
-    def enter(self):
-        for k, v in self.kwargs.items():
-            self.scope[k] = v
-
-        self.reload_locals()
-
-def test_no_init_class():
-
-    @features(BareFeature)
-    class NoInit(metaclass=FeatureMeta):
-        pass
 
 class BareFeature:
+
+    @Attr
+    def __init__(self):
+        self.init_feature = 13
 
     @only_self
     def touch_init(self):
@@ -38,7 +26,6 @@ class BareFeature:
 
     # what we are saying here is tht we want to wrap __init__
     # but we do nmot provide an init
-    __init__ = Attr()
     __init__.add_hook(touch_init)
 
 class WootFeature:
@@ -51,24 +38,53 @@ class WootFeature:
     __init__ = Attr()
     __init__.add_hook(woot_init)
 
+def test_feature():
+    @features(BareFeature)
+    class NoInit(Feature):
+        pass
 
-@features(BareFeature)
-class NoInit(metaclass=FeatureMeta):
-    pass
+    @features(BareFeature)
+    class FirstInit(Feature):
+        def __init__(self, arg):
+            self.arg = arg
 
-@features(WootFeature)
-class Frank(NoInit):
-    pass
+    ni = NoInit()
+    nt.assert_equal(ni.touched, True)
+    nt.assert_equal(ni.init_feature, 13)
 
-# should get it's own copy
-nt.assert_is_not(NoInit.__init__, Frank.__init__)
+    fi = FirstInit(1)
+    nt.assert_equal(fi.arg, 1)
+    nt.assert_equal(fi.touched, True)
+    nt.assert_equal(fi.init_feature, 13)
 
-o = NoInit()
-f = Frank()
-nt.assert_equal(o.touched, True)
-nt.assert_not_in('woot', o.__dict__)
+def test_multiple_feature():
 
-nt.assert_equal(f.touched, True)
-nt.assert_in('woot', f.__dict__)
-nt.assert_equal(f.woot, True)
+    @features(BareFeature)
+    class NoInit(Feature):
+        pass
 
+    @features(WootFeature)
+    class MultipleFeature(NoInit):
+        pass
+
+    # should get it's own copy
+    nt.assert_is_not(NoInit.__init__, MultipleFeature.__init__)
+
+    f = MultipleFeature()
+
+    nt.assert_equal(f.touched, True)
+    nt.assert_in('woot', f.__dict__)
+    nt.assert_equal(f.woot, True)
+
+
+def test_simple_init():
+    """
+    When an Attr is in parent and we just have a normal method, defining
+    that method should just replace the orig_func.
+    """
+class SimpleInit(Feature):
+    # a regualr method should just replace the original
+    def __init__(self, hi):
+        self.hi = hi
+
+nt.assert_true(SimpleInit.__init__.orig_func)

@@ -1,6 +1,10 @@
 """
 An anchor's behavior is a cascading list of Attrs where the hooks/pipelines/etc
 are carried from each class to its subclasses.
+
+Implicit in discussing anchors is class hierarchy. We use the terms parent/child
+where child is always the current context. Which means that we don't touch the
+child when processing the parent. We always process the class dicts root down.
 """
 from collections import defaultdict, OrderedDict
 from types import FunctionType
@@ -8,6 +12,12 @@ from types import FunctionType
 from ..pattern_match import pattern
 from .attr import Attr
 from ..meta import MetaMeta
+
+class AnchorFuncError(Exception):
+    pass
+
+class InvalidAnchorOverrideError(Exception):
+    pass
 
 class AnchorFunc:
     """
@@ -48,56 +58,11 @@ def add_to_attr(attr, func):
     adder(func.func)
     return attr
 
-@pattern
-def _to_anchor(parent, child, bases):
-    """
-    if the parent_anchor is an Attr, we propogate it.
-    if the child is not also an Attr, then we assume something went wrong
-    the child class should know that it needs to be an Attr.
-    """
-    meta [match : parent, child]
-
-    ~ Attr, Attr | parent, child
-    ~ Attr, None | parent, Attr()
-    ~ Attr, FunctionType | parent, Attr(child)
-    ~ None, Attr | Attr(), child
-    ~ None, None [when: bases == ()] | Attr(), Attr()
-    ~ None, FunctionType | Attr(), Attr(child)
-
-def propogate_anchor(dct, bases, name, preprocess=None):
-    """
-    When we find that the parent class defined the name as
-    an anchor, we propogate the hooks from that method to the
-    child class.
-
-    Each subclass requires it's own copy since a hook might be added to a
-    subclass anchor.
-    """
-    parent_anchor, child_anchor = parent_child_anchors(dct, bases, name)
-    if preprocess:
-        preprocess(parent_anchor, child_anchor)
-    new_anchor = Attr.combine(parent_anchor, child_anchor)
-    return new_anchor
-
-def _parent_child(dct, bases, name):
-    parent = _parent_anchor(bases, name)
-    child = dct.get(name)
-    return parent, child
-
-def parent_child_anchors(dct, bases, name):
-    """
-    Returns a pair of attrs ready for combining.
-    """
-    parent, child = _parent_child(dct, bases, name)
-    parent_anchor, child_anchor = _to_anchor(parent, child, bases)
-    return parent_anchor, child_anchor
-
-def _parent_anchor(bases, hook_name):
-    for base in bases:
-        return base.__dict__[hook_name]
-
-class AnchorFuncError(Exception):
-    pass
+def _parent_anchors(bases):
+    if not bases:
+        return {}
+    base_dict = bases[0].__dict__
+    return {k:v for k, v in base_dict.items() if isinstance(v, Attr)}
 
 def _get_anchor_name(k, v):
     anchor_name = k
@@ -105,7 +70,7 @@ def _get_anchor_name(k, v):
         anchor_name = v.name
     return anchor_name
 
-def _check_funcs(funcs):
+def _validate_funcs(funcs):
     if len(funcs) == 1:
         return True
 
@@ -114,12 +79,12 @@ def _check_funcs(funcs):
     if any(map(is_attr, funcs[1:])):
         raise AnchorFuncError("Cannot have a Attr after AnchorFuncs")
 
-def _merge_anchor_funcs(funcs):
+def _reduce_anchor_funcs(funcs):
     """
     Merge a list of AnchorFuncs into an Attr. If the first element is
     an Attr, then we merge into that Attr.
     """
-    _check_funcs(funcs)
+    _validate_funcs(funcs)
     if isinstance(funcs, Attr):
         return funcs
 
@@ -132,7 +97,7 @@ def _merge_anchor_funcs(funcs):
         add_to_attr(attr, func)
     return attr
 
-def aggregate_anchor_funcs(dct):
+def _aggregate_anchor_funcs(dct):
     """ aggregate a class dict into single Attrs per name """
     dct = filter(lambda x: isinstance(x[1], (Attr, AnchorFunc)), dct.items())
     items = [(_get_anchor_name(k, v), v) for k, v in dct]
@@ -140,22 +105,34 @@ def aggregate_anchor_funcs(dct):
     for k, v in items:
         res[k].append(v)
 
-    update = {k:_merge_anchor_funcs(funcs) for k, funcs in res.items()}
+    update = {k:_reduce_anchor_funcs(funcs) for k, funcs in res.items()}
     return update
 
-def aggregate_parent_anchors(dct, bases):
+def _merge_parent_child_anchors(dct, bases):
     """
     If the super class has an Attr, we're assuming it is an Anchor.
     """
-    base_dict = bases[0].__dict__
     update = OrderedDict()
-    for k, v in base_dict.items():
-        if isinstance(v, Attr):
-            if k in update:
-                raise AnchorDuplicateAttr(k)
-            update[k] = propogate_anchor(dct, bases, k)
-            continue
+    for k, v in parent_anchors.items():
+        update[k] = propogate_anchor(dct, bases, k)
+        continue
     return update
+
+_missing = object()
+
+@pattern
+def _to_anchor(parent, child):
+    """
+    if the parent_anchor is an Attr, we propogate it.
+    if the child is not also an Attr, then we assume something went wrong
+    the child class should know that it needs to be an Attr.
+    """
+    meta [match : parent, child]
+
+    ~ Attr, Attr | parent, child
+    ~ Attr, _missing | parent, Attr()
+    ~ Attr, FunctionType | parent, Attr(child)
+    ~ _missing, Attr | Attr(), child # new anchor
 
 def anchor_updates(dct, bases):
     """
@@ -167,14 +144,23 @@ def anchor_updates(dct, bases):
     super classes, so this doesn't go up the mro to find anchors originally
     defined in a grandparent class.
     """
-    dct = dct.copy()
-    anchor_funcs = aggregate_anchor_funcs(dct)
-    dct.update(anchor_funcs)
+    parent_anchors = _parent_anchors(bases)
+    child_anchors = _aggregate_anchor_funcs(dct)
 
-    if bases:
-        propogated_anchors = aggregate_parent_anchors(dct, bases)
-        anchor_funcs.update(propogated_anchors)
-    return anchor_funcs
+    all_anchors = set(child_anchors) | set(parent_anchors)
+
+    update = {}
+    for name in all_anchors:
+        parent = parent_anchors.get(name, _missing)
+        child = child_anchors.get(name, _missing)
+
+        if child is _missing:
+            child = dct.get(name, _missing)
+        parent, child = _to_anchor(parent, child)
+
+        new_anchor = Attr.combine(parent, child)
+        update[name] = new_anchor
+    return update
 
 class AnchorMeta(MetaMeta):
     def __new__(cls, name, bases, dct):

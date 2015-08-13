@@ -1,7 +1,7 @@
 from ..class_util import class_attrs, set_class_attr, init_name
 from ..multidecorator import MultiDecorator, only_self, system
 from ..pattern_match import pattern
-from .anchor import propogate_anchor
+from .anchor import AnchorMeta
 
 from .attr import Attr
 from types import FunctionType
@@ -24,15 +24,13 @@ def run_feature_inits(self):
         if feature_init:
             feature_init()
 
-class FeatureMeta(type):
+class FeatureMeta(AnchorMeta):
     def __new__(cls, name, bases, dct):
-        preprocess = lambda parent, child: child.add_hook(run_feature_inits)
-        new_init = propogate_anchor(dct, bases, '__init__', preprocess)
-        dct['__init__'] = new_init
         return super().__new__(cls, name, bases, dct)
 
 class Feature(metaclass=FeatureMeta):
     __init__ = Attr()
+    __init__.add_hook(run_feature_inits)
 
 class FeatureInvariantError(Exception):
     pass

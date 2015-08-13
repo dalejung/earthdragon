@@ -9,7 +9,7 @@ from ..anchor import (
     pipeline,
     transform,
     add_to_attr,
-    aggregate_anchor_funcs,
+    _aggregate_anchor_funcs,
     AnchorFuncError,
     AnchorMeta
 )
@@ -42,7 +42,7 @@ def test_aggregate_anchor_func():
     dct['api_method'] = Attr(api_method)
     dct['api_hook'] = api_hook
 
-    update = aggregate_anchor_funcs(dct)
+    update = _aggregate_anchor_funcs(dct)
     nt.assert_is_instance(update['hello'], Attr)
     nt.assert_is_instance(update['api_method'], Attr)
 
@@ -60,7 +60,7 @@ def test_aggregate_anchor_func_error():
     dct['api_method'] = Attr(api_method)
 
     with nt.assert_raises(AnchorFuncError):
-        update = aggregate_anchor_funcs(dct)
+        update = _aggregate_anchor_funcs(dct)
 
 
 def test_anchor_meta():
