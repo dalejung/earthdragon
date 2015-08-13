@@ -31,6 +31,7 @@ class FeatureMeta(AnchorMeta):
 class FeatureBase(metaclass=FeatureMeta):
     __init__ = Attr()
     __init__.add_hook(run_feature_inits)
+    _features_ = []
 
 class FeatureInvariantError(Exception):
     pass
@@ -45,7 +46,7 @@ def mix(base, feature):
     Note:
         The feature.__init__ is called at the end of BaseComponent.__init__.
     """
-    _features_ = getattr(base, '_features_', [])[:] # copy so we don't modify ancestor
+    _features_ = getattr(base, '_features_')[:] # copy so we don't modify ancestor
     if feature in _features_:
         msg = '{feature_name} already mixed'.format(feature_name=feature_name.__name__)
         print(msg)
