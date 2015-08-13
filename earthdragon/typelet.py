@@ -59,11 +59,17 @@ class Typelet:
         self.name = None
         self.unique = kwargs.pop('unique', False)
 
+        default = None
+        if 'default' in kwargs:
+            default = kwargs.pop('default')
+            self.validate(default)
+        self.default = default
+
     def __get__(self, obj, cls=None):
         if obj is None:
             obj = cls
         name = self.get_name(obj)
-        return obj.__dict__.get(name, None)
+        return obj.__dict__.get(name, self.default)
 
     def __set__(self, obj, value):
         new_value = self._validate(obj, value)
@@ -85,7 +91,7 @@ class Typelet:
 
         return value
 
-    def validate(self, obj, value):
+    def validate(self, value):
         return value
 
     def error(self, value, obj=None):

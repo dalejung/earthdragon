@@ -11,8 +11,9 @@ class ExampleObj:
     dct = Dict(int)
     dct_key = Dict(int, key_class=str)
     lst = List(V)
+    num = Int(default=10)
 
-class Dict(unittest.TestCase):
+class DictTestCase(unittest.TestCase):
     def test_validate(self):
         with nt.assert_raises(TypeletError):
             ex = ExampleObj()
@@ -30,7 +31,7 @@ class Dict(unittest.TestCase):
             ex = ExampleObj()
             ex.dct_key = {'int1': 123, 3: 123}
 
-class List(unittest.TestCase):
+class ListTestCase(unittest.TestCase):
     def test_validate(self):
         with nt.assert_raises(TypeletError):
             ex = ExampleObj()
@@ -41,3 +42,12 @@ class List(unittest.TestCase):
 
         with nt.assert_raises(TypeletError):
             ex.lst = [V(), V(), 3]
+
+class IntTestCase(unittest.TestCase):
+    def test_default(self):
+        obj = ExampleObj()
+        nt.assert_equal(obj.num, 10)
+        # default still goes through normal validation
+        with nt.assert_raises(TypeletError):
+            class BadDefault:
+                bad_num = Int(default='10')
