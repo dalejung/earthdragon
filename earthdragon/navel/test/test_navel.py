@@ -42,3 +42,17 @@ def test_navel_lockable():
     hk = HippoKid(100, 200)
     hk.good_change_x(49)
     nt.assert_equal(hk.x, 50)
+
+def test_nested_lockable():
+    class Parent(Navel):
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+
+    class Child(Parent):
+        def __init__(self, x, y):
+            super().__init__(x, y) # this was broken before
+            self.x = x
+            self.y = y
+
+    c = Child(1, 2)

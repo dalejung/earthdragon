@@ -1,4 +1,4 @@
-from earthdragon.typelet import Bool
+from earthdragon.typelet import Int
 from earthdragon.multidecorator import (
     MultiDecorator,
     require_self,
@@ -12,14 +12,14 @@ class UnexpectedMutationError(Exception):
 
 class Lockable:
 
-    _locked = Bool()
+    _in_flight = Int(default=0)
 
     @first
     @only_self
     def unlock(self):
-        self._locked = False
+        self._in_flight += 1
         yield
-        self._locked = True
+        self._in_flight -= 1
 
     __init__ = Attr()
     __init__.add_hook(unlock)
@@ -28,10 +28,10 @@ class Lockable:
     @first
     @require_self
     def _lock_check(self, name, value): # replicate setattr signature
-        if name in ['_locked']:
+        if name in ['_in_flight']:
             return
 
-        if self._locked:
+        if self._in_flight <= 0:
             raise UnexpectedMutationError(name)
         yield
 
