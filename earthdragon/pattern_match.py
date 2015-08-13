@@ -314,7 +314,7 @@ class PatternBuilder:
         new_func_def = copy.deepcopy(self.func_def)
         ret = ast.Return(value=expression, lineno=1, col_offset=0)
         new_func_def.body = [ret]
-        new_func = create_function(new_func_def, self.func)
+        new_func = create_function(new_func_def, self.func, ignore_closure=True)
         return new_func
 
 
