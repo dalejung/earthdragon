@@ -9,7 +9,7 @@ from earthdragon.multidecorator import (
 
 import nose.tools as nt
 from ... import feature
-from ...feature import *
+from ...feature import features, FeatureBase, Attr
 from earthdragon.context import WithScope
 
 
@@ -40,11 +40,11 @@ class WootFeature:
 
 def test_feature():
     @features(BareFeature)
-    class NoInit(Feature):
+    class NoInit(FeatureBase):
         pass
 
     @features(BareFeature)
-    class FirstInit(Feature):
+    class FirstInit(FeatureBase):
         def __init__(self, arg):
             self.arg = arg
 
@@ -60,7 +60,7 @@ def test_feature():
 def test_multiple_feature():
 
     @features(BareFeature)
-    class NoInit(Feature):
+    class NoInit(FeatureBase):
         pass
 
     @features(WootFeature)
@@ -82,7 +82,7 @@ def test_simple_init():
     When an Attr is in parent and we just have a normal method, defining
     that method should just replace the orig_func.
     """
-class SimpleInit(Feature):
+class SimpleInit(FeatureBase):
     # a regualr method should just replace the original
     def __init__(self, hi):
         self.hi = hi

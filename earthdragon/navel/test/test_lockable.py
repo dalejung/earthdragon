@@ -1,10 +1,10 @@
 import nose.tools as nt
 
 from ..lockable import Lockable, mutate, UnexpectedMutationError
-from earthdragon.feature import FeatureMeta, features, Feature
+from earthdragon.feature import features, FeatureBase
 
 @features(Lockable)
-class Something(Feature):
+class Something(FeatureBase):
     def __init__(self, bob):
         self.bob = bob
 
@@ -16,7 +16,7 @@ class Something(Feature):
         self.bob = bob
 
 @features(Lockable)
-class Another(Feature):
+class Another(FeatureBase):
     def __init__(self, bob):
         self.bob = bob
 

@@ -28,7 +28,7 @@ class FeatureMeta(AnchorMeta):
     def __new__(cls, name, bases, dct):
         return super().__new__(cls, name, bases, dct)
 
-class Feature(metaclass=FeatureMeta):
+class FeatureBase(metaclass=FeatureMeta):
     __init__ = Attr()
     __init__.add_hook(run_feature_inits)
 
