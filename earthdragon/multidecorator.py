@@ -39,6 +39,9 @@ with section("Hook Paramter Categories"):
     class only_self(FunctionCategory):
         pass
 
+    # TODO: Add decorator that sends additional meta info during hook priming.
+    # Information like the current object, the func name, etc.
+
 @pattern
 def munge_args(hook, is_method, args, kwargs):
     meta [match : hook]
@@ -252,6 +255,31 @@ class MultiDecorator:
     def copy(self):
         return self.combine(self)
 
+class CallWrapOnce:
+    """
+    Simple context wrapper that ensures that we only call hooks on the
+    first call. We assume that super().method() means to only call
+    the original function and not the wrapper.
+
+    Imagine a method call count wrapper. We wouldn't want to increment the
+    count for every super().method() call. Conceptually, we treat obj.method()
+    as one call, even if it calls many super methods within its invocation
+    """
+    # TODO perf test this and many bring it to cython
+    _in_flight = set()
+
+    def __init__(self, key):
+        self.key = key
+        self.first_call = self.key not in CallWrapOnce._in_flight
+
+    def __enter__(self):
+        if self.first_call:
+            CallWrapOnce._in_flight.add(self.key) # no op if already in
+        return self.first_call
+
+    def __exit__(self, type, value, traceback):
+        if self.first_call:
+            CallWrapOnce._in_flight.remove(self.key)
 
 class MethodDecorator:
     """
@@ -259,12 +287,19 @@ class MethodDecorator:
     to know whether it's being called as method or regular
     function.
     """
+
     def __init__(self, decorator, obj):
         self.decorator = decorator
         self.obj = obj
 
     def __call__(self, *args, **kwargs):
-        return self.decorator.call(True, self.obj, *args, **kwargs)
+        name = self.decorator.__name__
+        key = (id(self.obj), name)
+        with CallWrapOnce(key) as first_call:
+            if first_call:
+                # run the normal hooks
+                return self.decorator.call(True, self.obj, *args, **kwargs)
+            return self.decorator.orig_func(self.obj, *args, **kwargs)
 
     def __getattr__(self, name):
         if hasattr(self.decorator, name):
