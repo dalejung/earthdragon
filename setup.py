@@ -7,6 +7,7 @@ setup(
     name=DISTNAME,
     version=FULLVERSION,
     packages=['earthdragon'],
-    entry_points={
-    }
-      )
+    install_requires = [
+        'asttools',
+    ]
+)
