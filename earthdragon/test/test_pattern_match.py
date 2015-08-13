@@ -122,9 +122,9 @@ def test_pattern_match_doc():
         """
         meta[match: x, y]
 
+_missing = object()
 def test_pattern_match_object():
     # test again object() sentinels
-    _missing = object()
 
     @pattern
     def match(x):
