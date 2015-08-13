@@ -1,6 +1,7 @@
 import nose.tools as nt
 
 from ..navel import Navel
+from ...feature import Attr
 from ..lockable import UnexpectedMutationError, mutate
 
 def test_navel_lockable():
@@ -56,3 +57,22 @@ def test_nested_lockable():
             self.y = y
 
     c = Child(1, 2)
+
+def test_hooks_called_once():
+    count = 0
+    def transform(func):
+        nonlocal count
+        count += 1
+        assert func is not object.__init__
+        return func
+
+    class Parent(Navel):
+        __init__ = Attr()
+        __init__.add_transform(transform)
+
+    class Child(Parent):
+        def __init__(self):
+            super().__init__()
+
+    c = Child()
+    nt.assert_equal(count, 1)
