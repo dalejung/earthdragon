@@ -110,6 +110,9 @@ class MultiDecorator:
     _func = None
     @property
     def func(self):
+        if self.orig_func is None:
+            return None
+
         if self._func is None:
             func = self.orig_func
             for transform in self.transforms:

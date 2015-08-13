@@ -433,3 +433,19 @@ def test_combine_pipeline():
     # should be equivalent of ((x + 2) ** (x + 2) - 10)
     correct = lambda x: ((x + 2) ** (x + 2) - 10)
     nt.assert_equal(c(10), correct(10))
+
+
+def test_add_transform():
+    def identity(func):
+        import inspect
+        assert inspect.isfunction(func)
+        return func
+
+    trans_dec = MultiDecorator()
+    trans_dec.add_transform(identity)
+
+    @trans_dec
+    def duplicate(x):
+        return [x, x]
+
+    nt.assert_equal(duplicate(1), [1, 1])
