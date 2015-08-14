@@ -37,13 +37,22 @@ def gather_typelets(dct, bases=[]):
 
 def typelet_repr(self, typelets=None):
     """
+    Repr utility that will default to printing the
+    class and its typelets
     """
     class_ = self.__class__
     class_name = class_.__name__
 
     attrs = typelets or []
+    if hasattr(class_, '_earthdragon_typelets'):
+        attrs = getattr(class_, '_earthdragon_typelets')
     if hasattr(class_, '__repr_attrs__'):
         attrs = getattr(class_, '__repr_attrs__')
+    return _typelet_repr(self, attrs)
+
+def _typelet_repr(self, attrs):
+    class_ = self.__class__
+    class_name = class_.__name__
 
     bits = []
     for k in attrs:
