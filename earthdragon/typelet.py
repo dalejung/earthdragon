@@ -35,13 +35,13 @@ def gather_typelets(dct, bases=[]):
         typelets.update(tdict)
     return typelets
 
-def typelet_repr(self, typelets):
+def typelet_repr(self, typelets=None):
     """
     """
     class_ = self.__class__
     class_name = class_.__name__
 
-    attrs = typelets
+    attrs = typelets or []
     if hasattr(class_, '__repr_attrs__'):
         attrs = getattr(class_, '__repr_attrs__')
 
