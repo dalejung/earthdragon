@@ -21,6 +21,29 @@ def replace_class_closure(func, class_):
                                 closure=(make_cell(class_),))
     return new_func
 
+def get_invoked_args(argspec, *args, **kwargs):
+    """
+    Based on a functions argspec, figure out what the resultant function
+    scope would be based on variables passed in
+    """
+    if not isinstance(argspec, inspect.ArgSpec):
+        # handle functools.wraps functions
+        if hasattr(argspec, '__wrapped__'):
+            argspec = inspect.getargspec(argspec.__wrapped__)
+        else:
+            argspec = inspect.getargspec(argspec)
+
+    # we're assuming self is not in *args for method calls
+    args_names = argspec.args
+    if argspec.args[0] == 'self':
+        args_names = args_names[1:]
+
+    realized_args = dict(zip(args_names, args))
+    assert not set(realized_args).intersection(kwargs)
+    res = kwargs.copy()
+    res.update(realized_args)
+    return res
+
 class CategoryMeta(type):
     def __new__(cls, name, bases, dct):
         dct.setdefault('_registry', set())
