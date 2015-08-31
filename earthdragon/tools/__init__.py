@@ -1,4 +1,4 @@
 from .follow import Follow
-from .trace import Trace
+from .trace import trace
 from .debugtrace import DebugTrace
 from .profiler import Profiler
