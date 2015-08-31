@@ -68,12 +68,27 @@ class FuncTracer(Tracer):
         if self.global_callback:
             self.global_callback(meta['name'], f_locals)
 
-def trace(*args, **kwargs):
-    runner = TracerRunner()
-    if not args and len(kwargs) == 1 and 'tracer' in kwargs:
-        runner.add_tracer(kwargs['tracer'])
-        return runner
+class Builder:
+    def __init__(self):
+        self.runner = TracerRunner()
 
-    func_tracer = FuncTracer(*args, **kwargs)
-    runner.add_tracer(func_tracer)
-    return runner
+    def funcs(self, *args, **kwargs):
+        func_tracer = FuncTracer(*args, **kwargs)
+        self.runner.add_tracer(func_tracer)
+        return self
+
+    def tracer(self, tracer):
+        self.runner.add_tracer(tracer)
+        return self
+
+    def __enter__(self):
+        return self.runner.__enter__()
+
+    def __exit__(self, *args, **kwargs):
+        return self.runner.__exit__(*args, **kwargs)
+
+def trace(*args, **kwargs):
+    builder = Builder()
+    # default to func tracer
+    builder.funcs(*args, **kwargs)
+    return builder
