@@ -1,5 +1,6 @@
 import inspect
 import types
+import gc
 
 def make_cell(value):
     # http://nedbatchelder.com/blog/201301/byterun_and_making_cells.html
@@ -64,3 +65,35 @@ class CategoryMeta(type):
 
 class FunctionCategory(metaclass=CategoryMeta):
     pass
+
+def get_parent(code):
+    """
+    Given a code object find the Class that uses it as a method.
+    First we find the function that wraps the code, then from there
+    we find the class dict or method object.
+
+    Note: get_referrers will often return both forms. We escape on whatever we
+    hit first.
+
+    Also, this is a real slow function and relies on the gc.
+    """
+    funcs = [f for f in gc.get_referrers(code)
+                    if inspect.isfunction(f)]
+
+    if len(funcs) != 1:
+        return None
+
+    refs = [f for f in gc.get_referrers(funcs[0])]
+
+    for ref in refs:
+        # assume if that if a dict is pointed to by a class,
+        # that dict is the __dict__
+        if isinstance(ref, dict):
+            parents = [p for p in gc.get_referrers(ref) if isinstance(p, type)]
+            if len(parents) == 1:
+                return parents[0].__name__
+
+        if inspect.ismethod(ref):
+            return ref.__qualname__.rsplit('.', 1)[0]
+
+    return None

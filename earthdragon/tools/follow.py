@@ -4,6 +4,7 @@ import sys
 import os.path
 import difflib
 from collections import OrderedDict
+from earthdragon.func_util import get_parent
 
 import pandas as pd
 from pandas.core.common import in_ipnb
@@ -34,28 +35,6 @@ def is_class_dict(dct):
     if '__dict__' not in dct or not inspect.isgetsetdescriptor(dct['__dict__']):
         return False
     return True
-
-def get_parent(code):
-    funcs = [f for f in gc.get_referrers(code)
-                    if inspect.isfunction(f)]
-
-    if len(funcs) != 1:
-        return None
-
-    refs = [f for f in gc.get_referrers(funcs[0])]
-
-    for ref in refs:
-        # assume if that if a dict is pointed to by a class,
-        # that dict is the __dict__
-        if isinstance(ref, dict):
-            parents = [p for p in gc.get_referrers(ref) if isinstance(p, type)]
-            if len(parents) == 1:
-                return parents[0].__name__
-
-        if inspect.ismethod(ref):
-            return ref.__qualname__.rsplit('.', 1)[0]
-
-    return None
 
 class Follow(object):
     """
