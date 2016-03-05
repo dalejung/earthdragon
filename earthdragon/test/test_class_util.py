@@ -1,4 +1,8 @@
-from ..class_util import get_unbounded_super, set_class_attr
+from ..class_util import (
+    get_unbounded_super,
+    set_class_attr,
+    class_attrs,
+)
 import nose.tools as nt
 
 def test_get_unbounded_super():
@@ -93,3 +97,13 @@ def test_unbounded_super():
     owner, meth = get_unbounded_super(GrandParent, '__init__')
     nt.assert_is(owner, object)
     nt.assert_is(meth, object.__init__)
+
+
+def test_class_attrs():
+    class Bob:
+        dale = 1
+
+    class Frank(Bob):
+        whee = 2
+
+    attrs = class_attrs(Frank)
