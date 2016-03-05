@@ -2,7 +2,7 @@ import unittest
 
 import nose.tools as nt
 
-from ..typelet import Int, List, Dict, TypeletError, KeyTypeError
+from ..typelet import Int, List, Dict, TypeletError, KeyTypeError, Float
 
 class V:
     pass
@@ -12,6 +12,7 @@ class ExampleObj:
     dct_key = Dict(int, key_class=str)
     lst = List(V)
     num = Int(default=10)
+    fl = Float()
 
 class DictTestCase(unittest.TestCase):
     def test_validate(self):
@@ -51,3 +52,13 @@ class IntTestCase(unittest.TestCase):
         with nt.assert_raises(TypeletError):
             class BadDefault:
                 bad_num = Int(default='10')
+
+class FloatTestCase(unittest.TestCase):
+    def test_validate(self):
+        import numpy as np
+        obj = ExampleObj()
+        obj.fl = np.float(1.9)
+        obj.fl = 10
+        obj.fl = 1.3
+        with nt.assert_raises(TypeletError):
+            obj.fl = "DALE"
