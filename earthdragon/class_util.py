@@ -18,7 +18,10 @@ def class_attrs(cls):
     attrs = classify_class_attrs(cls)
     not_object_defined = lambda attr: attr.defining_class != object
     non_object_attrs = filter(not_object_defined, attrs)
-    class_attr_dict = dict((attr.name, dict(attr.__dict__)) for attr in non_object_attrs)
+    class_attr_dict = {}
+    for attr in non_object_attrs:
+        attr_dict = {name: getattr(attr, name) for name in attr._fields}
+        class_attr_dict[attr.name] = attr_dict
     return class_attr_dict
 
 def get_bindable(obj, base):

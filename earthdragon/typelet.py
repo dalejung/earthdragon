@@ -7,6 +7,7 @@ import inspect
 import uuid
 import inspect
 import datetime
+import numbers
 
 from .class_util import _get_name
 
@@ -133,6 +134,12 @@ class Int(Typelet):
     def validate(self, value):
         if isinstance(value, int) and self.check_min(value)\
             and self.check_max(value):
+            return value
+        self.error(value)
+
+class Float(Typelet):
+    def validate(self, value):
+        if isinstance(value, numbers.Number):
             return value
         self.error(value)
 
