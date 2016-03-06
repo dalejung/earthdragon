@@ -155,12 +155,6 @@ class UUID(Typelet):
             return value
         self.error(value)
 
-class UUID(Typelet):
-    def validate(self, value):
-        if isinstance(value, uuid.UUID):
-            return value
-        self.error(value)
-
 class Datetime(Typelet):
     def validate(self, value):
         if isinstance(value, datetime.datetime):
