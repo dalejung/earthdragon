@@ -9,7 +9,7 @@ import inspect
 import datetime
 import numbers
 
-from .class_util import _get_name
+from ..class_util import _get_name
 
 class TypeletError(Exception):
     pass
