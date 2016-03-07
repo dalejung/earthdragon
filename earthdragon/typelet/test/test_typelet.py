@@ -64,9 +64,8 @@ class IntTestCase(unittest.TestCase):
 
 class FloatTestCase(unittest.TestCase):
     def test_validate(self):
-        import numpy as np
         obj = ExampleObj()
-        obj.fl = np.float(1.9)
+        obj.fl = 0.133
         obj.fl = 10
         obj.fl = 1.3
         with nt.assert_raises(TypeletError):
