@@ -2,7 +2,7 @@
 Type checking primitives. Traits is an overloaded term. Came up with Typelets
 ala IPython Traitlets.
 """
-from collections import deque, OrderedDict
+from collections import deque
 import inspect
 import uuid
 import inspect
@@ -16,51 +16,6 @@ class TypeletError(Exception):
 
 class KeyTypeError(TypeletError):
     pass
-
-def _gather_typelets(dct, key='_earthdragon_typelets'):
-    if key in dct:
-        return dct[key]
-
-    typelets = OrderedDict()
-    for k, v in dct.items():
-        if isinstance(v, Typelet):
-            typelets[k] = v
-    return typelets
-
-def gather_typelets(dct, bases=[]):
-    class_dicts = [base.__dict__ for base in bases] + [dct]
-    typelet_dicts = map(_gather_typelets, class_dicts)
-
-    typelets = OrderedDict()
-    for tdict in typelet_dicts:
-        typelets.update(tdict)
-    return typelets
-
-def typelet_repr(self, typelets=None):
-    """
-    Repr utility that will default to printing the
-    class and its typelets
-    """
-    class_ = self.__class__
-    class_name = class_.__name__
-
-    attrs = typelets or []
-    if hasattr(class_, '_earthdragon_typelets'):
-        attrs = getattr(class_, '_earthdragon_typelets')
-    if hasattr(class_, '__repr_attrs__'):
-        attrs = getattr(class_, '__repr_attrs__')
-    return _typelet_repr(self, attrs)
-
-def _typelet_repr(self, attrs):
-    class_ = self.__class__
-    class_name = class_.__name__
-
-    bits = []
-    for k in attrs:
-        v = getattr(self, k)
-        bits.append("{k}={v}".format(k=k, v=v))
-    attr_string = ', '.join(bits)
-    return "{class_name}({attr_string})".format(**locals())
 
 class Typelet:
     def __init__(self, **kwargs):
