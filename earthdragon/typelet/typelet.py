@@ -21,7 +21,12 @@ class Typelet:
     def __init__(self, **kwargs):
         self.value = None
         self.name = None
+        # TODO think about 1. should Typelet know about whether it's required
+        # since it doesn't know when the obj it's on is initialized.
+        # 2. Should this be hardcoded here or have a general kwargs system
+        # for random metadata
         self.unique = kwargs.pop('unique', False)
+        self.required = kwargs.pop('required', False)
 
         default = None
         if 'default' in kwargs:

@@ -11,6 +11,9 @@ from ..typelet import (
         Float,
         Unicode
 )
+import imp;
+from .. import util
+imp.reload(util)
 from ..util import TypeletMeta, inflate, InvalidInitInvocation
 
 class V:
@@ -140,7 +143,7 @@ def test_inflate_in_class():
         name = Unicode()
 
         def __init__(self, *args, **kwargs):
-            inflate(self, args, kwargs)
+            inflate(self, args, kwargs, require_all=True)
 
 
     obj = InflateClass(id=1, name="Dale")
@@ -175,3 +178,24 @@ def test_inflate_in_class_loose():
 
     obj.balance = 1
     nt.assert_equal(obj.balance, 1)
+
+
+def test_required():
+    class InflateRequired(metaclass=TypeletMeta):
+        """
+        Class that passes through only typelets and requires all
+        """
+
+        id = Int(required=True)
+        name = Unicode(required=True)
+        age = Int()
+        maiden_name = Unicode()
+
+        def __init__(self, *args, **kwargs):
+            inflate(self, args, kwargs)
+
+    with nt.assert_raises_regex(InvalidInitInvocation, "All required typelets"):
+        obj = InflateRequired(id=1)
+
+    obj = InflateRequired(id=1, name="Dale")
+    nt.assert_equal(obj.name, "Dale")

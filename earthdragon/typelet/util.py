@@ -76,7 +76,7 @@ def fill(obj, filled, name, value):
     filled[name] = True
 
 
-def inflate(self, args, kwargs, typelets_only=True, require_all=True):
+def inflate(self, args, kwargs, typelets_only=True, require_all=False):
     """
     Useful function within __init__ to match *args, **kwargs to typelet
     definition.
@@ -91,6 +91,8 @@ def inflate(self, args, kwargs, typelets_only=True, require_all=True):
     """
     filled = {}
     _typelets = self._earthdragon_typelets
+    required_typelets = {name: typelet for name, typelet in _typelets.items()
+            if typelet.required}
 
     if typelets_only and len(args) > len(_typelets):
         raise InvalidInitInvocation("Passed too many positional values")
@@ -106,3 +108,6 @@ def inflate(self, args, kwargs, typelets_only=True, require_all=True):
 
     if require_all and set(filled) != set(_typelets):
         raise InvalidInitInvocation("Need to fill all args")
+
+    if set(filled) < set(required_typelets):
+        raise InvalidInitInvocation("All required typelets must be passed in")
