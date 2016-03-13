@@ -86,15 +86,18 @@ def test_typelet_meta():
         gc_float = Float()
 
     p = Parent()
-    nt.assert_count_equal(p._earthdragon_typelets.keys(), ['parent_int'])
+    nt.assert_count_equal(p._earthdragon_merged_typelets.keys(), ['parent_int'])
 
     # child should have both parent and child typelets
     c = Child()
-    nt.assert_count_equal(c._earthdragon_typelets.keys(), ['child_int', 'parent_int'])
+    nt.assert_count_equal(c._earthdragon_merged_typelets.keys(), ['child_int', 'parent_int'])
+    nt.assert_count_equal(c._earthdragon_typelets.keys(), ['child_int'])
 
     gc = GrandChild()
-    nt.assert_count_equal(gc._earthdragon_typelets.keys(),
+    nt.assert_count_equal(gc._earthdragon_merged_typelets.keys(),
             ['child_int', 'parent_int', 'gc_int', 'gc_float'])
+    nt.assert_count_equal(gc._earthdragon_typelets.keys(),
+            ['gc_int', 'gc_float'])
 
 class InflateObj(metaclass=TypeletMeta):
     dct = Dict(int)
@@ -199,3 +202,7 @@ def test_required():
 
     obj = InflateRequired(id=1, name="Dale")
     nt.assert_equal(obj.name, "Dale")
+
+
+class Parent(metaclass=TypeletMeta):
+    pass

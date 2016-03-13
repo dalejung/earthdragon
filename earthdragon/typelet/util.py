@@ -15,9 +15,11 @@ class TypeletMeta(type):
         return mdict
 
     def __new__(cls, name, bases, dct):
-        typelets = gather_typelets(dct, bases)
+        typelets, merged = gather_typelets(dct, bases)
         dct['_earthdragon_typelets'] = typelets
+        dct['_earthdragon_merged_typelets'] = merged
         return super().__new__(cls, name, bases, dct)
+
 
 def _gather_typelets(dct, key='_earthdragon_typelets'):
     if key in dct:
@@ -29,14 +31,16 @@ def _gather_typelets(dct, key='_earthdragon_typelets'):
             typelets[k] = v
     return typelets
 
-def gather_typelets(dct, bases=[]):
-    class_dicts = [base.__dict__ for base in bases] + [dct]
-    typelet_dicts = map(_gather_typelets, class_dicts)
 
-    typelets = OrderedDict()
-    for tdict in typelet_dicts:
-        typelets.update(tdict)
-    return typelets
+def gather_typelets(dct, bases=[]):
+    current_typelets = _gather_typelets(dct)
+    merged_typelets = current_typelets.copy()
+    for base in bases:
+        typelets = _gather_typelets(base.__dict__,
+                '_earthdragon_merged_typelets')
+        merged_typelets.update(typelets)
+    return current_typelets, merged_typelets
+
 
 def typelet_repr(self, typelets=None):
     """
