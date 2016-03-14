@@ -54,7 +54,7 @@ class MetaMeta(type):
         return True
 
 def mro(dct, bases, name):
-    class_dicts = [base.__dict__ for base in bases] + [dct]
+    class_dicts = [dct] + [base.__dict__ for base in bases]
     for cdict in class_dicts:
         if name in cdict:
             return cdict[name]
