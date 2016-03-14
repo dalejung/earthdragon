@@ -1,8 +1,9 @@
 import nose.tools as nt
 
-from ..navel import Navel
+from ..navel import Navel, NavelMeta
 from ...feature import Attr
 from ..lockable import UnexpectedMutationError, mutate
+from earthdragon.typelet import TypeletMeta, Int
 
 def test_navel_lockable():
     class Hippo(Navel):
@@ -76,3 +77,21 @@ def test_hooks_called_once():
 
     c = Child()
     nt.assert_equal(count, 1)
+
+
+def test_multiple_meta():
+    class TestMultiMeta(NavelMeta, TypeletMeta):
+        pass
+
+    class Hippo(metaclass=TestMultiMeta):
+        x = Int()
+        y = Int()
+
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+
+    class HippoChild(Hippo):
+        pass
+
+    h = HippoChild(1, 2)
