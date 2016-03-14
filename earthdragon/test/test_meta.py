@@ -1,6 +1,6 @@
 import nose.tools as nt
 
-from ..meta import MetaMeta
+from ..meta import MetaMeta, mro
 
 def middle_matcher(start, end):
     def _match(key):
@@ -67,3 +67,30 @@ class TestClass2(metaclass=TestMeta2):
     set_bob_to = 'whee'
     l = bob
     dale = 1
+
+def test_mro():
+    class MROMeta(type):
+        def __new__(cls, name, bases, dct):
+            dct['test_gen'] = mro(dct, bases, 'test')
+            return super().__new__(cls, name, bases, dct)
+
+    class GrandLeft:
+        test = 'GrandLeft'
+
+    class GrandRight(metaclass=MROMeta):
+        test = 'GrandRight'
+
+    class Child(GrandLeft, GrandRight, metaclass=MROMeta):
+        test = 'Child'
+
+    class GrandChild(Child):
+        test = 'GC'
+
+    class GrandChild2(Child):
+        pass
+
+    gc = GrandChild()
+
+    nt.assert_equal(gc.test, gc.test_gen)
+
+    gc2 = GrandChild2()
