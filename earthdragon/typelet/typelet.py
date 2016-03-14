@@ -17,6 +17,10 @@ class TypeletError(Exception):
 class KeyTypeError(TypeletError):
     pass
 
+class TypeletMissing:
+    pass
+_missing = TypeletMissing()
+
 class Typelet:
     def __init__(self, **kwargs):
         self.value = None

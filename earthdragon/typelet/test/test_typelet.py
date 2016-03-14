@@ -9,7 +9,8 @@ from ..typelet import (
         TypeletError,
         KeyTypeError,
         Float,
-        Unicode
+        Unicode,
+        _missing
 )
 import imp;
 from .. import util
@@ -137,12 +138,15 @@ def test_inflate_args():
 
 
 def test_inflate_in_class():
-    class InflateClass(metaclass=TypeletMeta):
+    class InflateParentClass(metaclass=TypeletMeta):
+        blah = Int(required=True)
+
+    class InflateClass(InflateParentClass):
         """
         Class that passes through only typelets and requires all
         """
 
-        id = Int()
+        id = Int(rquired=True)
         name = Unicode()
 
         def __init__(self, *args, **kwargs):
@@ -159,6 +163,12 @@ def test_inflate_in_class():
 
     with nt.assert_raises_regex(InvalidInitInvocation, "Need to fill all args"):
         obj = InflateClass(name="Dale")
+
+    # we only inflate current class typelets and not ancestors
+    with nt.assert_raises_regex(InvalidInitInvocation, "Pass non typelet"):
+        obj = InflateClass(id=1, name="Dale", blah=123)
+
+    nt.assert_in('blah', InflateClass._earthdragon_merged_typelets)
 
 
 def test_inflate_in_class_loose():
@@ -204,5 +214,38 @@ def test_required():
     nt.assert_equal(obj.name, "Dale")
 
 
-class Parent(metaclass=TypeletMeta):
-    pass
+def test_inherited_inflate():
+    """
+    First pass on how to support inherited Typelets.
+
+    The most sane world would be where Typelets are only
+    defined on the current class.
+    """
+    class Parent(metaclass=TypeletMeta):
+        p_id = Int(default=-1)
+
+        def __init__(self, *args, **kwargs):
+            inflate(self, args, kwargs, typelets_only=False, cls=__class__)
+            super().__init__()
+
+    class Child(Parent):
+        c_id = Int(required=True)
+        c_age = Int()
+
+        def __init__(self, c_id, c_age=_missing, *args, **kwargs):
+            inflate(self, [c_id, c_age], {}, typelets_only=False, cls=__class__)
+            super().__init__(*args, **kwargs)
+
+    class GrandChild(Child):
+        gc_id = Int(required=True)
+        gc_name = Unicode(required=True)
+
+        def __init__(self, g_id, gc_name, *args, **kwargs):
+            inflate(self, [g_id, gc_name], {}, typelets_only=False)
+            super().__init__(*args, **kwargs)
+
+    gc = GrandChild(1, 'Dale', 123)
+    nt.assert_equal(gc.gc_id, 1)
+    nt.assert_equal(gc.gc_name, 'Dale')
+    nt.assert_equal(gc.c_id, 123)
+    nt.assert_equal(gc.p_id, -1)

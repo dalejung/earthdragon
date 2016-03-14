@@ -2,7 +2,7 @@
 Utilities for integrating Typelet into classes.
 """
 from collections import OrderedDict
-from .typelet import Typelet
+from .typelet import Typelet, TypeletMissing
 
 class TypeletMeta(type):
     """
@@ -15,9 +15,10 @@ class TypeletMeta(type):
         return mdict
 
     def __new__(cls, name, bases, dct):
-        typelets, merged = gather_typelets(dct, bases)
+        typelets, merged, tro = gather_typelets(dct, bases)
         dct['_earthdragon_typelets'] = typelets
         dct['_earthdragon_merged_typelets'] = merged
+        dct['_earthdragon_tro'] = tro
         return super().__new__(cls, name, bases, dct)
 
 
@@ -35,11 +36,18 @@ def _gather_typelets(dct, key='_earthdragon_typelets'):
 def gather_typelets(dct, bases=[]):
     current_typelets = _gather_typelets(dct)
     merged_typelets = current_typelets.copy()
+    tro = []
+    for base in bases:
+        if '_eartdragon_tro' in base.__dict__:
+            tro = base.__dict__['_earthdragon_tro'].copy()
+            break
+
     for base in bases:
         typelets = _gather_typelets(base.__dict__,
                 '_earthdragon_merged_typelets')
         merged_typelets.update(typelets)
-    return current_typelets, merged_typelets
+        tro.append((base, typelets))
+    return current_typelets, merged_typelets, tro
 
 
 def typelet_repr(self, typelets=None):
@@ -80,7 +88,7 @@ def fill(obj, filled, name, value):
     filled[name] = True
 
 
-def inflate(self, args, kwargs, typelets_only=True, require_all=False):
+def inflate(self, args, kwargs, typelets_only=True, require_all=False, cls=None):
     """
     Useful function within __init__ to match *args, **kwargs to typelet
     definition.
@@ -94,9 +102,14 @@ def inflate(self, args, kwargs, typelets_only=True, require_all=False):
         immutable value objects.
     """
     filled = {}
-    _typelets = self._earthdragon_typelets
+    if cls is None:
+        cls = self.__class__
+    _typelets = cls._earthdragon_typelets
     required_typelets = {name: typelet for name, typelet in _typelets.items()
             if typelet.required}
+
+    # Sentinel to different missing values from None
+    args = [arg for arg in args if not isinstance(arg, TypeletMissing)]
 
     if typelets_only and len(args) > len(_typelets):
         raise InvalidInitInvocation("Passed too many positional values")
