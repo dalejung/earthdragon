@@ -6,7 +6,6 @@ import difflib
 from collections import OrderedDict
 from earthdragon.func_util import get_parent
 
-import pandas as pd
 from pandas.core.common import in_ipnb
 
 def is_property(code):

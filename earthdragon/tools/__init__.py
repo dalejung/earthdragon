@@ -1,5 +1,6 @@
 from .follow import Follow
 from .trace import trace
+from .timer import Timer
 try:
     import line_profiler
 except ImportError:
