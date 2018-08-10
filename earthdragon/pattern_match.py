@@ -1,17 +1,17 @@
 import ast
-from ast import UnaryOp, BinOp, Tuple, Name
 import copy
-from functools import singledispatch
 import inspect
 
-from asttools import get_source, func_rewrite, func_code, Matcher, unwrap
-from asttools.function import get_invoked_args, create_function
+from asttools import func_code, Matcher, unwrap
+from asttools.function import create_function
 
-from .context import section
+from .func_util import get_invoked_args
 from .typelet import List, Type
+
 
 class Pattern:
     when = None
+
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -24,10 +24,14 @@ class Pattern:
             return ret
         return True
 
+
 _default = object()
+
+
 class DefaultPattern(Pattern):
     def match(self, obj):
         return True
+
 
 class InstancePattern(Pattern):
     _type = Type(type)
@@ -38,6 +42,7 @@ class InstancePattern(Pattern):
     def match(self, obj):
         return isinstance(obj, self._type)
 
+
 class ScalarPattern(Pattern):
     def __init__(self, value):
         self.value = value
@@ -47,6 +52,7 @@ class ScalarPattern(Pattern):
             return False
         return obj == self.value
 
+
 class ValuePattern(Pattern):
     def __init__(self, value):
         self.value = value
@@ -54,12 +60,14 @@ class ValuePattern(Pattern):
     def match(self, obj):
         return obj == self.value
 
+
 class IdentityPattern(Pattern):
     def __init__(self, value):
         self.value = value
 
     def match(self, obj):
         return obj is self.value
+
 
 class MultiPattern(Pattern):
     patterns = List(Pattern)
@@ -69,8 +77,10 @@ class MultiPattern(Pattern):
         tests = zip(self.patterns, obj)
         return all([p.match(o) for p, o in tests])
 
+
 class UnhandledPatternError(Exception):
     pass
+
 
 class PatternMatcher:
     match = List(str)
@@ -98,6 +108,7 @@ class PatternMatcher:
                 func = self.funcs[pattern]
                 return func(*args, **kwargs)
         raise UnhandledPatternError("Not handled by PatternMatcher")
+
 
 def config_from_subscript(sub):
     """
@@ -131,6 +142,7 @@ def config_from_subscript(sub):
         block.append(value)
     return blocks
 
+
 def process_item(item):
     if isinstance(item, ast.Slice):
         name = unwrap(item.lower)
@@ -149,6 +161,7 @@ def get_meta(sub):
         meta[k] = list(map(unwrap, vals))
     return meta
 
+
 def validate(meta_line, cases):
     assert meta_line == Matcher('meta[_any_]')
 
@@ -156,6 +169,7 @@ def validate(meta_line, cases):
     tuple_matcher = Matcher("~ _any_ | _any_, _any_")
     for line in cases:
         pass
+
 
 def pattern_split(lines):
     for i, line in enumerate(lines):
@@ -167,9 +181,11 @@ def pattern_split(lines):
         raise TypeError("Pattern match function must start with str or meta")
     return lines[i], lines[i+1:]
 
+
 def pattern(func):
     builder = PatternBuilder(func)
     return builder.build()
+
 
 def resolve_name(scope, name):
     import builtins
@@ -178,20 +194,26 @@ def resolve_name(scope, name):
     except KeyError:
         return getattr(builtins, name)
 
+
 _na = object()
+
+
 def before_pipe(node):
     if isinstance(node, ast.UnaryOp):
         if isinstance(node.op, ast.Invert):
             return node.operand, _na
     if isinstance(node, ast.BinOp):
-        if isinstance(node.left, ast.UnaryOp) and isinstance(node.op, ast.BitOr):
+        if isinstance(node.left, ast.UnaryOp) \
+           and isinstance(node.op, ast.BitOr):
             return before_pipe(node.left)[0], node.right
         if isinstance(node.op, ast.BitOr):
             return node.left, node.right
     raise TypeError("Unsupported node type")
 
+
 def after_pipe(node):
     return _na, node
+
 
 def split_case_return(node):
     elts = [node]
@@ -205,7 +227,8 @@ def split_case_return(node):
     grabber = before_pipe
     for elt in elts:
         case_bit, return_bit = grabber(elt)
-        if found_pipe: assert case_bit is _na
+        if found_pipe:
+            assert case_bit is _na
 
         if not found_pipe and return_bit is not _na:
             grabber = after_pipe
@@ -218,6 +241,7 @@ def split_case_return(node):
             return_nodes.append(return_bit)
 
     return case_nodes, return_nodes
+
 
 def split_case(node):
     if isinstance(node, ast.Expr):
@@ -236,6 +260,7 @@ def split_case(node):
         )
 
     return pattern_case, pattern_return
+
 
 class PatternBuilder:
     def __init__(self, func):
@@ -314,7 +339,11 @@ class PatternBuilder:
         new_func_def = copy.deepcopy(self.func_def)
         ret = ast.Return(value=expression, lineno=1, col_offset=0)
         new_func_def.body = [ret]
-        new_func = create_function(new_func_def, self.func, ignore_closure=True)
+        new_func = create_function(
+            new_func_def,
+            self.func,
+            ignore_closure=True
+        )
         return new_func
 
 

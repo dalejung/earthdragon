@@ -2,11 +2,17 @@ import inspect
 import types
 import gc
 
+from typing import Union, Callable, Any
+
+from .typecheck import typecheck
+
+
 def make_cell(value):
     # http://nedbatchelder.com/blog/201301/byterun_and_making_cells.html
     # Construct an actual cell object by creating a closure right here,
     # and grabbing the cell object out of the function we create.
     return (lambda: value).__closure__[0]
+
 
 def replace_class_closure(func, class_):
     """
@@ -19,10 +25,13 @@ def replace_class_closure(func, class_):
     assert '__class__' in closurevars.nonlocals
 
     new_func = types.FunctionType(func.__code__, func.__globals__,
-                                closure=(make_cell(class_),))
+                                  closure=(make_cell(class_),))
     return new_func
 
-def get_invoked_args(argspec, *args, **kwargs):
+
+@typecheck
+def get_invoked_args(argspec: Union[inspect.ArgSpec, Callable[..., Any]],
+                     *args, **kwargs):
     """
     Based on a functions argspec, figure out what the resultant function
     scope would be based on variables passed in
@@ -45,6 +54,7 @@ def get_invoked_args(argspec, *args, **kwargs):
     res.update(realized_args)
     return res
 
+
 class CategoryMeta(type):
     def __new__(cls, name, bases, dct):
         dct.setdefault('_registry', set())
@@ -63,8 +73,10 @@ class CategoryMeta(type):
     def __instancecheck__(cls, C):
         return C in cls._registry
 
+
 class FunctionCategory(metaclass=CategoryMeta):
     pass
+
 
 def get_parent(code):
     """
@@ -77,8 +89,10 @@ def get_parent(code):
 
     Also, this is a real slow function and relies on the gc.
     """
-    funcs = [f for f in gc.get_referrers(code)
-                    if inspect.isfunction(f)]
+    funcs = [
+        f for f in gc.get_referrers(code)
+        if inspect.isfunction(f)
+    ]
 
     if len(funcs) != 1:
         return None

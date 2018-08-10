@@ -1,14 +1,10 @@
 from asttools import (
-    get_source,
     func_rewrite,
     func_code,
     Matcher,
     quick_parse,
     unwrap,
 )
-import ast
-import copy
-import inspect
 import nose.tools as nt
 
 from ..pattern_match import (
