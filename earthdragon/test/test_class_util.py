@@ -3,7 +3,12 @@ from ..class_util import (
     set_class_attr,
     class_attrs,
 )
-import nose.tools as nt
+
+from nose.tools import (
+    assert_is,
+    assert_raises,
+)
+
 
 def test_get_unbounded_super():
     class GrandParent:
@@ -11,6 +16,7 @@ def test_get_unbounded_super():
 
     class Parent(GrandParent):
         init_count = 0
+
         def __init__(self):
             self.init_count += 1
             super().__init__()
@@ -24,7 +30,7 @@ def test_get_unbounded_super():
     c = Child()
     attr = c.__init__
     owner, meth = get_unbounded_super(c, attr)
-    nt.assert_is(meth, object.__init__)
+    assert_is(meth, object.__init__)
 
     class Parent:
         def __init__(self):
@@ -37,10 +43,11 @@ def test_get_unbounded_super():
     c = Child()
     attr = c.__init__
     owner, meth = get_unbounded_super(c, attr)
-    nt.assert_is(meth, Parent.__init__)
+    assert_is(meth, Parent.__init__)
 
     owner, meth = get_unbounded_super(c, '__init__')
-    nt.assert_is(meth, Parent.__init__)
+    assert_is(meth, Parent.__init__)
+
 
 def test_set_class_attr():
     class Parent:
@@ -55,11 +62,13 @@ def test_set_class_attr():
     p = Parent()
 
     setattr(Parent, 'hello', Surrogate.hello)
-    with nt.assert_raises(TypeError):
+
+    with assert_raises(TypeError):
         p.hello('hi')
 
     set_class_attr(Parent, 'hello', Surrogate.hello)
     p.hello('hi')
+
 
 def test_unbounded_super():
     class GrandParent:
@@ -80,23 +89,23 @@ def test_unbounded_super():
 
     c = Child(1)
     owner, meth = get_unbounded_super(c, 'hi')
-    nt.assert_is(owner, Parent)
-    nt.assert_is(meth, Parent.hi)
+    assert_is(owner, Parent)
+    assert_is(meth, Parent.hi)
 
     owner, meth = get_unbounded_super(Child, 'hi')
-    nt.assert_is(owner, Parent)
-    nt.assert_is(meth, Parent.hi)
+    assert_is(owner, Parent)
+    assert_is(meth, Parent.hi)
     owner, meth = get_unbounded_super(Parent, 'hi')
-    nt.assert_is(owner, GrandParent)
-    nt.assert_is(meth, GrandParent.hi)
+    assert_is(owner, GrandParent)
+    assert_is(meth, GrandParent.hi)
 
     owner, meth = get_unbounded_super(GrandParent, 'hi')
-    nt.assert_is(owner, object)
-    nt.assert_is(meth, None)
+    assert_is(owner, object)
+    assert_is(meth, None)
 
     owner, meth = get_unbounded_super(GrandParent, '__init__')
-    nt.assert_is(owner, object)
-    nt.assert_is(meth, object.__init__)
+    assert_is(owner, object)
+    assert_is(meth, object.__init__)
 
 
 def test_class_attrs():

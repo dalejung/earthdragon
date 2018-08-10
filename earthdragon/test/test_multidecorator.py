@@ -8,14 +8,22 @@ from ..multidecorator import (
     RequiredSelfError,
 )
 
-import nose.tools as nt
+from nose.tools import (
+    assert_list_equal,
+    assert_true,
+    assert_false,
+    assert_raises,
+    assert_raises_regex,
+    assert_equal
+)
+
 
 def test_decorator():
     EVENTS = []
+
     @MultiDecorator
     def sup():
         EVENTS.append('sup')
-
 
     def cm():
         EVENTS.append('cm.pre')
@@ -31,11 +39,16 @@ def test_decorator():
     sup.add_hook(cm2)
 
     sup()
-    nt.assert_list_equal(EVENTS, ['cm.pre', 'cm2.pre', 'sup', 'cm2.post', 'cm.post'])
+    assert_list_equal(
+        EVENTS,
+        ['cm.pre', 'cm2.pre', 'sup', 'cm2.post', 'cm.post']
+    )
+
 
 def test_decorator_factory():
     EVENTS = []
     some_dec = MultiDecorator()
+
     def some_hook():
         EVENTS.append('pre')
         yield
@@ -47,11 +60,14 @@ def test_decorator_factory():
         EVENTS.append('whee')
 
     whee()
-    nt.assert_list_equal(EVENTS, ['pre', 'whee', 'post'])
+    assert_list_equal(EVENTS, ['pre', 'whee', 'post'])
+
 
 def test_decorator_methods():
     EVENTS = []
+
     method_dec = MultiDecorator()
+
     def on_off(self, *args):
         self.on = True
         yield
@@ -64,19 +80,21 @@ def test_decorator_methods():
 
         @method_dec
         def hello(self, callback):
-            nt.assert_true(self.on)
+            assert_true(self.on)
             callback(self)
             self.called = True
             print('whell')
 
     e = Example()
-    nt.assert_false(e.on)
+    assert_false(e.on)
     e.hello(lambda s: s)
-    nt.assert_false(e.on)
-    nt.assert_true(e.called)
+    assert_false(e.on)
+    assert_true(e.called)
+
 
 def test_pipeline():
     EVENTS = []
+
     def some_hook(*args):
         EVENTS.append('pre')
         yield
@@ -102,24 +120,28 @@ def test_pipeline():
     ret = duplicate('dale')
 
     # add_1 was added first. shoudl be exeucted first
-    nt.assert_equal(EVENTS[1], 1)
-    nt.assert_equal(EVENTS[2], 2)
+    assert_equal(EVENTS[1], 1)
+    assert_equal(EVENTS[2], 2)
 
     # orig func
-    nt.assert_equal(ret[0], 'dale') 
-    nt.assert_equal(ret[1], 'dale')
+    assert_equal(ret[0], 'dale') 
+    assert_equal(ret[1], 'dale')
     # pipeline
-    nt.assert_equal(ret[2], 1)
-    nt.assert_equal(ret[3], 2)
+    assert_equal(ret[2], 1)
+    assert_equal(ret[3], 2)
+
 
 def some_hook(*args):
     yield
 
+
 def add_1(ret):
     return ret + [1]
 
+
 def add_2(ret):
     return ret + [2]
+
 
 def test_decorator_update():
     func_dec = MultiDecorator()
@@ -130,8 +152,9 @@ def test_decorator_update():
     new_dec.add_pipeline(add_2)
     new_dec.update(func_dec)
     # note that new functions will be added after
-    nt.assert_list_equal(new_dec.pipelines, [add_2, add_1])
-    nt.assert_list_equal(new_dec.hooks, [some_hook])
+    assert_list_equal(new_dec.pipelines, [add_2, add_1])
+    assert_list_equal(new_dec.hooks, [some_hook])
+
 
 def test_decorator_update_duplicate():
     func_dec = MultiDecorator()
@@ -139,8 +162,9 @@ def test_decorator_update_duplicate():
 
     new_dec = MultiDecorator()
     new_dec.add_hook(some_hook)
-    with nt.assert_raises(DuplicateWrapperError):
+    with assert_raises(DuplicateWrapperError):
         new_dec.update(func_dec)
+
 
 def test_decorator_send_ret():
     """
@@ -148,10 +172,10 @@ def test_decorator_send_ret():
     and a context object. context object is there for future proofing.
     """
     EVENTS = []
+
     def log_return(*args):
         ret, context = yield
         EVENTS.append(ret)
-
 
     func_dec = MultiDecorator()
     func_dec.add_hook(log_return)
@@ -161,7 +185,7 @@ def test_decorator_send_ret():
         return val + 1
 
     hello(100)
-    nt.assert_equal(EVENTS[0], 101)
+    assert_equal(EVENTS[0], 101)
 
 
 def test_hook_short_circuit():
@@ -181,20 +205,20 @@ def test_hook_short_circuit():
     func_dec = MultiDecorator()
     func_dec.add_hook(yield_return)
 
-
     @func_dec
     def power(val):
         return val*val
 
     # normal
     ret = power(10)
-    nt.assert_equal(ret, 100)
-    nt.assert_list_equal(yield_return.events, ['pre', 'post', 100])
+    assert_equal(ret, 100)
+    assert_list_equal(yield_return.events, ['pre', 'post', 100])
 
     # hit the short circuit
     ret = power(11)
-    nt.assert_equal(ret, 121)
-    nt.assert_list_equal(yield_return.events, [])
+    assert_equal(ret, 121)
+    assert_list_equal(yield_return.events, [])
+
 
 def test_hook_nullary():
     """
@@ -206,6 +230,7 @@ def test_hook_nullary():
         yield
 
     EVENTS = []
+
     @nullary
     def log_greeting():
         EVENTS.append('log_greeting')
@@ -225,13 +250,13 @@ def test_hook_nullary():
 
     g = Greeter()
     g.hello('sup')
-    nt.assert_equal(g.count, 1)
+    assert_equal(g.count, 1)
 
-    nt.assert_list_equal(EVENTS, ['log_greeting'])
-
+    assert_list_equal(EVENTS, ['log_greeting'])
 
     # test on non-method function
     EVENTS = []
+
     @nullary
     def log_pre_post():
         EVENTS.append('log_greeting')
@@ -245,13 +270,12 @@ def test_hook_nullary():
     def hello(greeting='hi'):
         return greeting
 
-
     hello('sup')
-    nt.assert_list_equal(EVENTS, ['log_greeting', 'sup'])
-
+    assert_list_equal(EVENTS, ['log_greeting', 'sup'])
 
     def bare():
         yield
+
     without_null_dec = MultiDecorator()
     without_null_dec.add_hook(bare)
 
@@ -260,8 +284,9 @@ def test_hook_nullary():
         return greeting
 
     # without nullary, we pass in unneeded params
-    with nt.assert_raises_regex(TypeError, '0 positional arguments but 1 was'):
+    with assert_raises_regex(TypeError, '0 positional arguments but 1 was'):
         hello('whee')
+
 
 def test_hook_only_self():
     """
@@ -286,15 +311,16 @@ def test_hook_only_self():
     g = Greeter()
     g.hello('sup')
     g.hello('hi')
-    nt.assert_equal(g.count, 2)
+    assert_equal(g.count, 2)
 
     # make sure it errors on non methods
     @method_dec
     def hello(greeting):
         return greeting
 
-    with nt.assert_raises(RequiredSelfError):
+    with assert_raises(RequiredSelfError):
         hello(10)
+
 
 def test_hook_static():
     """
@@ -305,6 +331,7 @@ def test_hook_static():
         yield
 
     EVENTS = []
+
     @static
     def log_greeting(greeting):
         EVENTS.append(greeting)
@@ -324,25 +351,26 @@ def test_hook_static():
 
     g = Greeter()
     g.hello('sup')
-    nt.assert_equal(g.count, 1)
+    assert_equal(g.count, 1)
 
     g2 = Greeter()
     g2.hello('sup2')
     g2.hello('sup3')
-    nt.assert_equal(g2.count, 2)
-    nt.assert_list_equal(EVENTS, ['sup', 'sup2', 'sup3'])
+    assert_equal(g2.count, 2)
+    assert_list_equal(EVENTS, ['sup', 'sup2', 'sup3'])
 
     # test that static works for non-method types
     EVENTS.clear()
     only_static_dec = MultiDecorator()
     only_static_dec.add_hook(log_greeting)
+
     @only_static_dec
     def hello(greeting):
         return greeting
 
     hello(1)
     hello(2)
-    nt.assert_list_equal(EVENTS, [1,2])
+    assert_list_equal(EVENTS, [1, 2])
 
 
 def test_requires_self():
@@ -352,6 +380,7 @@ def test_requires_self():
         yield
 
     EVENTS = []
+
     @static
     def log_greeting(greeting):
         EVENTS.append(greeting)
@@ -365,8 +394,9 @@ def test_requires_self():
     def hello(greeting):
         return greeting
 
-    with nt.assert_raises(RequiredSelfError):
+    with assert_raises(RequiredSelfError):
         hello(10)
+
 
 def test_readme_example():
     @only_self
@@ -375,6 +405,7 @@ def test_readme_example():
         yield
 
     EVENTS = []
+
     @static
     def log_greeting(greeting=None):
         ret, context = yield
@@ -398,10 +429,13 @@ def test_readme_example():
 
     g = Greeter()
     ret = g.hello()
-    nt.assert_equal(ret, 'hello. goodbye')
+    assert_equal(ret, 'hello. goodbye')
     g.hello('howdy')
-    nt.assert_list_equal(EVENTS, [(None, 'hello. goodbye'), ('howdy', 'howdy. goodbye')])
-    nt.assert_equal(g.count, 2)
+    assert_list_equal(
+        EVENTS,
+        [(None, 'hello. goodbye'), ('howdy', 'howdy. goodbye')]
+    )
+    assert_equal(g.count, 2)
     print(EVENTS)
 
 
@@ -411,16 +445,17 @@ def test_combine_func():
     c = MultiDecorator.combine(a, b)
 
     # func should have proogated
-    nt.assert_true(c.orig_func)
-    nt.assert_equal(c(1), 3)
+    assert_true(c.orig_func)
+    assert_equal(c(1), 3)
 
     # switch order
     d = MultiDecorator.combine(b, a)
-    nt.assert_equal(d(1), 2)
+    assert_equal(d(1), 2)
 
     # add attr without func
     f = MultiDecorator.combine(b, a, MultiDecorator())
-    nt.assert_equal(f(1), 2)
+    assert_equal(f(1), 2)
+
 
 def test_combine_pipeline():
     a = MultiDecorator(lambda x: x+1)
@@ -431,12 +466,18 @@ def test_combine_pipeline():
     c = MultiDecorator.combine(a, b)
 
     # should be equivalent of ((x + 2) ** (x + 2) - 10)
-    correct = lambda x: ((x + 2) ** (x + 2) - 10)
-    nt.assert_equal(c(10), correct(10))
+
+    def correct(x):
+        return ((x + 2) ** (x + 2) - 10)
+
+    assert_equal(c(10), correct(10))
+
 
 def test_combine_last_func_method():
+
     def transform(func):
-        assert func.__qualname__.endswith('Bob.func'), "should transform orig_func"
+        assert func.__qualname__.endswith('Bob.func'), \
+                "should transform orig_func"
         from asttools import create_function, get_source
         print(get_source(func))
         return create_function("def bob(x): return x", func)
@@ -455,7 +496,6 @@ def test_combine_last_func_method():
     c.func
 
 
-
 def test_add_transform():
     def identity(func):
         import inspect
@@ -469,4 +509,4 @@ def test_add_transform():
     def duplicate(x):
         return [x, x]
 
-    nt.assert_equal(duplicate(1), [1, 1])
+    assert_equal(duplicate(1), [1, 1])
