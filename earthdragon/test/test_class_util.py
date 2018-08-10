@@ -112,4 +112,4 @@ def test_class_attrs():
     class Frank(Bob):
         whee = 2
 
-    attrs = class_attrs(Frank)
+    attrs = class_attrs(Frank)  # noqa: F841

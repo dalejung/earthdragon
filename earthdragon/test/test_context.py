@@ -39,4 +39,4 @@ class WithScopeTest(unittest.TestCase):
             assert _out['new_vars']['hallo'] == 123
 
         with WithScope(out, exit_handler=handler):
-            hallo = 123
+            hallo = 123  # noqa: F841

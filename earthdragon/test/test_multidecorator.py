@@ -56,8 +56,6 @@ def test_decorator_factory():
 
 
 def test_decorator_methods():
-    EVENTS = []
-
     method_dec = MultiDecorator()
 
     def on_off(self, *args):
@@ -277,7 +275,7 @@ def test_hook_nullary():
 
     # without nullary, we pass in unneeded params
     with pytest.raises(TypeError,
-                                    match='0 positional arguments but 1 was'):
+                       match='0 positional arguments but 1 was'):
         hello('whee')
 
 

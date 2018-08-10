@@ -26,14 +26,14 @@ class Unhandled:
 def test_single_pattern():
     @pattern
     def pat(val):
-        meta[match: val]
+        meta[match: val]  # noqa: F821
 
         ~ 'dale' | "DALE"
         ~ 'list' | []
         ~ str | val
         ~ int | 'int'+str(val)
         ~ Hello | val.greeting
-        ~ default | 'default_' + str(val)
+        ~ default | 'default_' + str(val)  # noqa: F821
 
     obj = Hello("Welcome Friend")
     assert pat(obj) == "Welcome Friend"
@@ -47,7 +47,7 @@ def test_single_pattern():
 def test_multi_return():
     @pattern
     def multi_return(x):
-        meta[match: x]
+        meta[match: x]  # noqa: F821
 
         ~ float | type(x), x, x
         ~ int | type(x), x
@@ -59,11 +59,11 @@ def test_multi_return():
 def test_when():
     @pattern
     def multi_return(x):
-        meta[match: x]
+        meta[match: x]  # noqa: F821
 
-        ~ float [when: x > 1] | type(x), x, x
-        ~ int [when: x > 100 and x < 150] | x, 'Between 100 and 150'
-        ~ int [when: x > 10]| 'INT OVER 10'
+        ~ float [when: x > 1] | type(x), x, x  # noqa: F821, E211
+        ~ int [when: x > 100 and x < 150] | x, 'Between 100 and 150'  # noqa: F821, E211, E501
+        ~ int [when: x > 10] | 'INT OVER 10'   # noqa: F821, E211
         ~ int | type(x), x
 
     assert multi_return(1) == (int, 1)
@@ -104,7 +104,7 @@ def test_split_case_return():
 def test_multi_pattern():
     @pattern
     def multi(x, y):
-        meta[match: x, y]
+        meta[match: x, y]  # noqa: F821
 
         ~ float, 3 | type(x), x, y
         ~ int, 3 | type(x), x, 'int'
@@ -122,7 +122,7 @@ def test_pattern_match_doc():
         """
         doc string
         """
-        meta[match: x, y]
+        meta[match: x, y]  # noqa: F821
 
 
 _missing = object()
@@ -133,20 +133,20 @@ def test_pattern_match_object():
 
     @pattern
     def match(x):
-        meta[match: x]
+        meta[match: x]  # noqa: F821
 
         ~ _missing | "MISSING"
-        ~ default | x
+        ~ default | x  # noqa: F821
 
     assert match(_missing) == "MISSING"
     assert match(100) == 100
 
     @pattern
     def multimatch(x, y):
-        meta[match: x, y]
+        meta[match: x, y]  # noqa: F821
 
         ~ 1, _missing | x, "MISSING"
-        ~ default | x, y
+        ~ default | x, y  # noqa: F821
 
     assert multimatch(1, _missing) == (1, "MISSING")
     assert multimatch(_missing, 100) == (_missing, 100)

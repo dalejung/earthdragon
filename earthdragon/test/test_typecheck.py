@@ -1,7 +1,4 @@
-import pytest
-import typing
-
-from ..typecheck import (
+from ..typecheck import (  # noqa: F401
     module_tree,
     TypeCheckProxy,
     typecheck_enable,
@@ -10,8 +7,10 @@ from ..typecheck import (
     reset_manager
 )
 
-def bob(a, b:str):
+
+def bob(a, b: str):
     return a, b
+
 
 def test_typecheck_enable_package():
     # enabling parent should enable children
@@ -20,6 +19,7 @@ def test_typecheck_enable_package():
     typecheck_enable('fakepkg')
     assert is_typecheck_enabled(None, full_module='fakepkg.fakemod') is True
     assert is_typecheck_enabled(None, full_module='fakepkg') is True
+
 
 def test_typecheck_enable_module():
     # enabling children won't enable siblings

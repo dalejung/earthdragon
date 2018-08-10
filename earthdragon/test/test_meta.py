@@ -26,16 +26,16 @@ def test_scope_add():
     # first case. bob is undefined
     with pytest.raises(NameError):
         class DummyClass(metaclass=DummyMeta):
-            l = bob
+            l = bob  # noqa: E741, F821
             dale = 1
 
     # using DummyMeta and setitem_handler, bob gets added to ns. no error
-    class DummyClass(metaclass=DummyMeta):
+    class DummyClass(metaclass=DummyMeta): # noqa: E261, F811
         set_bob_to = 'whee'
-        l = bob
+        l = bob  # noqa: E741, F821
         dale = 1
 
-    assert DummyClass.l == 'whee'
+    assert DummyClass.l == 'whee'  # noqa: E741
     # set_bob_to is not added to class. Just a directive
     assert hasattr(DummyClass, 'set_bob_to')
 
@@ -52,15 +52,13 @@ def test_scope_add_temporal():
     # using DummyMeta and setitem_handler, bob gets added to ns. no error
     class DummyClass2(metaclass=DummyMeta2):
         set_bob_to = 'whee'
-        l = bob
+        l = bob  # noqa: E741, F821
         dale = 1
     assert not hasattr(DummyClass2, 'set_bob_to')
 
 
 class DummyMeta2(MetaMeta):
     def setitem_handler(key, value, scope):
-        import inspect
-        frames = inspect.stack()
         mid_name = set_to_match(key)
         if not mid_name:
             return
@@ -71,7 +69,7 @@ class DummyMeta2(MetaMeta):
 # using DummyMeta and setitem_handler, bob gets added to ns. no error
 class DummyClass2(metaclass=DummyMeta2):
     set_bob_to = 'whee'
-    l = bob
+    l = bob  # noqa: E741, F821
     dale = 1
 
 
@@ -99,5 +97,3 @@ def test_mro():
     gc = GrandChild()
 
     assert gc.test == gc.test_gen
-
-    gc2 = GrandChild2()
