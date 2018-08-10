@@ -1,12 +1,5 @@
 import unittest
-
-from nose.tools import (
-    assert_count_equal,
-    assert_is,
-    assert_is_not,
-    assert_not_in,
-    assert_equal
-)
+from collections import Counter
 
 from ..context import WithScope
 
@@ -26,23 +19,24 @@ class WithScopeTest(unittest.TestCase):
 
         # while original bob is restored,
         # we still have access to the with scope bob
-        assert_count_equal(out['new_only'], ['dale'])
-        assert_count_equal(out['new_vars'], ['dale', 'bob'])
-        assert_count_equal(out['modified_vars'], ['bob'])
-        assert_is(out['new_vars']['bob'], new_bob)
-        assert_is_not(out['new_vars']['bob'], bob)
+        assert Counter(list(out['new_only'])) == Counter(['dale'])
+
+        assert Counter(list(out['new_vars'])) == Counter(['dale', 'bob'])
+        assert Counter(list(out['modified_vars'])) == Counter(['bob'])
+        assert out['new_vars']['bob'] is new_bob
+        assert out['new_vars']['bob'] is not bob
 
         # dale should be removed
-        assert_not_in('dale', locals())
-        assert_is(bob, orig_bob)
+        assert 'dale' not in locals()
+        assert bob is orig_bob
 
     def test_exit_handler(self):
         out = {}
 
         def handler(self, _out):
-            assert_is(out, _out)
-            assert_is(self.out, _out)
-            assert_equal(_out['new_vars']['hallo'], 123)
+            assert out is _out
+            assert self.out is _out
+            assert _out['new_vars']['hallo'] == 123
 
         with WithScope(out, exit_handler=handler):
             hallo = 123

@@ -1,12 +1,9 @@
+import pytest
+
 from ..class_util import (
     get_unbounded_super,
     set_class_attr,
     class_attrs,
-)
-
-from nose.tools import (
-    assert_is,
-    assert_raises,
 )
 
 
@@ -30,7 +27,7 @@ def test_get_unbounded_super():
     c = Child()
     attr = c.__init__
     owner, meth = get_unbounded_super(c, attr)
-    assert_is(meth, object.__init__)
+    assert meth is object.__init__
 
     class Parent:
         def __init__(self):
@@ -43,10 +40,10 @@ def test_get_unbounded_super():
     c = Child()
     attr = c.__init__
     owner, meth = get_unbounded_super(c, attr)
-    assert_is(meth, Parent.__init__)
+    assert meth is Parent.__init__
 
     owner, meth = get_unbounded_super(c, '__init__')
-    assert_is(meth, Parent.__init__)
+    assert meth is Parent.__init__
 
 
 def test_set_class_attr():
@@ -63,7 +60,7 @@ def test_set_class_attr():
 
     setattr(Parent, 'hello', Surrogate.hello)
 
-    with assert_raises(TypeError):
+    with pytest.raises(TypeError):
         p.hello('hi')
 
     set_class_attr(Parent, 'hello', Surrogate.hello)
@@ -89,23 +86,23 @@ def test_unbounded_super():
 
     c = Child(1)
     owner, meth = get_unbounded_super(c, 'hi')
-    assert_is(owner, Parent)
-    assert_is(meth, Parent.hi)
+    assert owner is Parent
+    assert meth is Parent.hi
 
     owner, meth = get_unbounded_super(Child, 'hi')
-    assert_is(owner, Parent)
-    assert_is(meth, Parent.hi)
+    assert owner is Parent
+    assert meth is Parent.hi
     owner, meth = get_unbounded_super(Parent, 'hi')
-    assert_is(owner, GrandParent)
-    assert_is(meth, GrandParent.hi)
+    assert owner is GrandParent
+    assert meth is GrandParent.hi
 
     owner, meth = get_unbounded_super(GrandParent, 'hi')
-    assert_is(owner, object)
-    assert_is(meth, None)
+    assert owner is object
+    assert meth is None
 
     owner, meth = get_unbounded_super(GrandParent, '__init__')
-    assert_is(owner, object)
-    assert_is(meth, object.__init__)
+    assert owner is object
+    assert meth is object.__init__
 
 
 def test_class_attrs():

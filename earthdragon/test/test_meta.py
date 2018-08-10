@@ -1,6 +1,7 @@
-import nose.tools as nt
+import pytest
 
 from ..meta import MetaMeta, mro
+
 
 def middle_matcher(start, end):
     def _match(key):
@@ -10,10 +11,12 @@ def middle_matcher(start, end):
         return middle
     return _match
 
+
 set_to_match = middle_matcher("set_", "_to")
 
+
 def test_scope_add():
-    class TestMeta(MetaMeta):
+    class DummyMeta(MetaMeta):
         def setitem_handler(key, value, scope):
             mid_name = set_to_match(key)
             if not mid_name:
@@ -21,38 +24,40 @@ def test_scope_add():
             scope[mid_name] = value
 
     # first case. bob is undefined
-    with nt.assert_raises(NameError):
-        class TestClass(metaclass=TestMeta):
+    with pytest.raises(NameError):
+        class DummyClass(metaclass=DummyMeta):
             l = bob
             dale = 1
 
-    # using TestMeta and setitem_handler, bob gets added to ns. no error
-    class TestClass(metaclass=TestMeta):
+    # using DummyMeta and setitem_handler, bob gets added to ns. no error
+    class DummyClass(metaclass=DummyMeta):
         set_bob_to = 'whee'
         l = bob
         dale = 1
 
-    nt.assert_equal(TestClass.l, 'whee')
+    assert DummyClass.l == 'whee'
     # set_bob_to is not added to class. Just a directive
-    nt.assert_true(hasattr(TestClass, 'set_bob_to'))
+    assert hasattr(DummyClass, 'set_bob_to')
+
 
 def test_scope_add_temporal():
-    class TestMeta2(MetaMeta):
+    class DummyMeta2(MetaMeta):
         def setitem_handler(key, value, scope):
             mid_name = set_to_match(key)
             if not mid_name:
                 return
             scope[mid_name] = value
-            return False # don't add directive to class
+            return False  # don't add directive to class
 
-    # using TestMeta and setitem_handler, bob gets added to ns. no error
-    class TestClass2(metaclass=TestMeta2):
+    # using DummyMeta and setitem_handler, bob gets added to ns. no error
+    class DummyClass2(metaclass=DummyMeta2):
         set_bob_to = 'whee'
         l = bob
         dale = 1
-    nt.assert_false(hasattr(TestClass2, 'set_bob_to'))
+    assert not hasattr(DummyClass2, 'set_bob_to')
 
-class TestMeta2(MetaMeta):
+
+class DummyMeta2(MetaMeta):
     def setitem_handler(key, value, scope):
         import inspect
         frames = inspect.stack()
@@ -60,13 +65,15 @@ class TestMeta2(MetaMeta):
         if not mid_name:
             return
         scope[mid_name] = value
-        return False # don't add directive to class
+        return False  # don't add directive to class
 
-# using TestMeta and setitem_handler, bob gets added to ns. no error
-class TestClass2(metaclass=TestMeta2):
+
+# using DummyMeta and setitem_handler, bob gets added to ns. no error
+class DummyClass2(metaclass=DummyMeta2):
     set_bob_to = 'whee'
     l = bob
     dale = 1
+
 
 def test_mro():
     class MROMeta(type):
@@ -91,6 +98,6 @@ def test_mro():
 
     gc = GrandChild()
 
-    nt.assert_equal(gc.test, gc.test_gen)
+    assert gc.test == gc.test_gen
 
     gc2 = GrandChild2()
