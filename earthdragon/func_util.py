@@ -106,8 +106,14 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
 
     # fill in kw args
     for k in list(kwargs.keys()):
-        if k in args_names:
-            scope[k] = kwargs.pop(k)
+        if k not in args_names:
+            continue
+
+        # replicate calling error args variable is fill by position and kw arg
+        if k in scope:
+            raise TypeError(f"got multiple values for {k}")
+
+        scope[k] = kwargs.pop(k)
 
     # fill in the args default
     if len(args_names) > len(args):
@@ -144,16 +150,6 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
 
     return scope
 
-def invoker(a, b, *args, c=3, **kwargs):
-    return a, b, c
-
-print(inspect.getfullargspec(invoker))
-invoked_args = get_invoked_args(invoker, 1, 2, 3, c=4, d=5)
-correct_vals = {
-    'a': 1, 'b': 2, 'c': 4, 'args': (3,), 'kwargs': {'d': 5}
-}
-print(correct_vals)
-print(invoked_args._scope)
 
 class CategoryMeta(type):
     def __new__(cls, name, bases, dct):

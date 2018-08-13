@@ -42,3 +42,27 @@ def test_get_invoked_args_kw_only():
         'a': 1, 'b': 2, 'c': 4, 'args': (3,), 'kwargs': {'d': 5}
     }
     assert invoked_args == correct_vals
+
+
+def test_get_invoked_args_too_many_args():
+    def invoker(a, b, c=3):
+        return a, b, c
+
+    with pytest.raises(TypeError):
+        get_invoked_args(invoker, 1, 2, 3, 4, d=5)
+
+
+def test_get_invoked_args_unexpected_kw():
+    def invoker(a, b, c=3):
+        return a, b, c
+
+    with pytest.raises(TypeError):
+        get_invoked_args(invoker, 1, 2, d=5)
+
+
+def test_get_invoked_args_multiple_values():
+    def invoker(a, b, c=3):
+        return a, b, c
+
+    with pytest.raises(TypeError):
+        get_invoked_args(invoker, 1, 2, 3, c=5)
