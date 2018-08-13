@@ -1,4 +1,6 @@
 import collections
+from .func_util import get_invoked_args
+
 
 def get_func_ns(func):
     func_name = func.__name__
@@ -6,8 +8,10 @@ def get_func_ns(func):
     ns = f'{module}.{func_name}'
     return ns
 
+
 class MemoryCache:
     pass
+
 
 class staticcache:
     orig_func = None
@@ -43,11 +47,12 @@ class staticcache:
         if is_single:
             return 'default'
 
-        if not isinstance(args, collections.Hashable):
+        invoked_args = get_invoked_args(self.orig_func, *args, **kwargs)
+
+        if not isinstance(invoked_args, collections.Hashable):
             return None
 
-        print(args)
-        key = hash(args)
+        key = hash(invoked_args)
         return key
 
     def set_func(self, func):

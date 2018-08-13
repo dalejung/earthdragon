@@ -54,6 +54,14 @@ class SetOnceDict(collections.MutableMapping):
     def __repr__(self):
         return 'Scope:' + repr(self._scope)
 
+    def __hash__(self):
+        items = []
+        for k, v in self._scope.items():
+            if isinstance(v, collections.MutableMapping):
+                v = frozenset(v.items())
+            items.append((k, v))
+        return hash(frozenset(items))
+
 
 def make_cell(value):
     # http://nedbatchelder.com/blog/201301/byterun_and_making_cells.html
