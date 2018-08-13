@@ -1,4 +1,4 @@
-import pytest
+import pytest # noqa
 
 from ..func_util import (
     get_invoked_args
@@ -17,11 +17,28 @@ def test_get_invoked_args_nodefaults():
     assert invoked_args == correct_vals
 
 
-@pytest.mark.xfail
 def test_get_invoked_args_defaults():
     def invoker(a, b, c=3):
         return a, b, c
 
     invoked_args = get_invoked_args(invoker, 1, 2)
     correct_vals = {'a': 1, 'b': 2, 'c': 3}
+    assert invoked_args == correct_vals
+
+    def invoker2(a, b, *args, c=3):
+        return a, b, c
+
+    invoked_args = get_invoked_args(invoker, 1, 2)
+    correct_vals = {'a': 1, 'b': 2, 'c': 3}
+    assert invoked_args == correct_vals
+
+
+def test_get_invoked_args_kw_only():
+    def invoker(a, b, *args, c=3, **kwargs):
+        return a, b, c
+
+    invoked_args = get_invoked_args(invoker, 1, 2, 3, c=4, d=5)
+    correct_vals = {
+        'a': 1, 'b': 2, 'c': 4, 'args': (3,), 'kwargs': {'d': 5}
+    }
     assert invoked_args == correct_vals
