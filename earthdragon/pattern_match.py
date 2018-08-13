@@ -1,11 +1,10 @@
 import ast
 import copy
-import inspect
 
 from asttools import func_code, Matcher, unwrap
 from asttools.function import create_function
 
-from .func_util import get_invoked_args
+from .func_util import get_invoked_args, get_argspec
 from .typelet import List, Type
 
 
@@ -267,7 +266,7 @@ class PatternBuilder:
         self.func = func
         self.func_def = func_code(func)
         self.scope = func.__globals__
-        self.argspec = inspect.getargspec(func)
+        self.argspec = get_argspec(func)
 
     def build(self):
         func = self.func
