@@ -11,6 +11,7 @@ def fake_func(dale=1, **kwargs):
     import datetime
     return datetime.datetime.now()
 
+
 def test_decorator_bare():
     first = fake_func()
     second = fake_func()
