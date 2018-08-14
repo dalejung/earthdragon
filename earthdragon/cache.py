@@ -1,4 +1,7 @@
 import collections
+import types
+import asyncio
+
 from .func_util import get_invoked_args
 
 
@@ -31,6 +34,22 @@ class staticcache:
         ns = self.ns
 
         key = self.get_cache_key(*args, **kwargs)
+
+        # async
+        # TODO what's the best way to dedupe the code when supporting
+        # sync and async
+        if asyncio.iscoroutinefunction(func):
+            async def _wrap_coroutine():
+                if key in self.cache.setdefault(ns, {}):
+                    return self.cache[ns][key]
+
+                coro = func(*args, **kwargs)
+                ret = await coro
+                if key is not None:
+                    self.cache[ns][key] = ret
+                return ret
+
+            return _wrap_coroutine()
 
         if key in self.cache.setdefault(ns, {}):
             return self.cache[ns][key]

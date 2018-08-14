@@ -1,3 +1,6 @@
+import asyncio
+import time
+
 import pytest # noqa
 
 from ..cache import staticcache
@@ -7,7 +10,6 @@ from ..cache import staticcache
 def fake_func(dale=1, **kwargs):
     import datetime
     return datetime.datetime.now()
-
 
 def test_decorator_bare():
     first = fake_func()
@@ -35,3 +37,39 @@ def test_decorator_kwargs():
 
     fourth = fake_func(bob=3)
     assert first != fourth
+
+
+def test_decorator_async():
+    loop = asyncio.new_event_loop()
+
+    @staticcache
+    async def asyncfunc(dale=1):
+        await asyncio.sleep(1, loop=loop)
+        return time.monotonic()
+
+    try:
+        asyncio.set_event_loop(loop)
+
+        # make sure this takes a second
+        before = time.monotonic()
+        res1 = loop.run_until_complete(asyncfunc(3))
+        after = time.monotonic()
+        assert after - before >= 1
+
+        # this one should cache
+        before = time.monotonic()
+        res2 = loop.run_until_complete(asyncfunc(3))
+        after = time.monotonic()
+        assert after - before < .001
+
+        assert res1 == res2
+
+        # use new arg. cache is cold
+        before = time.monotonic()
+        res3 = loop.run_until_complete(asyncfunc(2))
+        after = time.monotonic()
+        assert after - before >= 1
+        assert res3 != res1
+
+    finally:
+        loop.close()
