@@ -3,10 +3,10 @@ import gc
 import sys
 import os.path
 import difflib
-from collections import OrderedDict
 from earthdragon.func_util import get_parent
 
-from pandas.io.formats.console import in_ipnb
+import pandas as pd
+
 
 def is_property(code):
     """
@@ -14,26 +14,29 @@ def is_property(code):
 
     gc idea taken from trace.py from stdlib
     """
-    ## use of gc.get_referrers() was suggested by Michael Hudson
+    # use of gc.get_referrers() was suggested by Michael Hudson
     # all functions which refer to this code object
     gc.collect()
     code_refs = gc.get_referrers(code)
     funcs = [f for f in code_refs
-                    if inspect.isfunction(f)]
+             if inspect.isfunction(f)]
     if len(funcs) != 1:
         return False
 
     # property object will reference the original func
     props = [p for p in gc.get_referrers(funcs[0])
-                    if isinstance(p, property)]
+             if isinstance(p, property)]
     return len(props) == 1
+
 
 def is_class_dict(dct):
     if not isinstance(dct, dict):
         return False
-    if '__dict__' not in dct or not inspect.isgetsetdescriptor(dct['__dict__']):
+    if '__dict__' not in dct \
+       or not inspect.isgetsetdescriptor(dct['__dict__']):
         return False
     return True
+
 
 class Follow(object):
     """
@@ -114,10 +117,9 @@ class Follow(object):
             parent_name = get_parent(code)
 
         indent, first_parent = self.indent_level(frame)
-        f = frame.f_back
         if event == "c_call":
             func_name = arg.__name__
-            fn = (indent, "", 0, func_name, id(frame),id(first_parent), None)
+            fn = (indent, "", 0, func_name, id(frame), id(first_parent), None)
         elif event == 'call':
             fcode = frame.f_code
             fn = (indent, fcode.co_filename, fcode.co_firstlineno,
@@ -145,7 +147,9 @@ class Follow(object):
         cols = ['indent', 'filename', 'lineno', 'func_name', 'frame_id',
                 'parent_id', 'parent_name']
         df = pd.DataFrame(data, columns=cols)
-        df.loc[:, 'filename'] = df.filename.apply(lambda s: os.path.basename(s))
+        df.loc[:, 'filename'] = df.filename.apply(
+            lambda s: os.path.basename(s)
+        )
         return df
 
     def __enter__(self):
@@ -172,19 +176,19 @@ class Follow(object):
                 clsname = self._caller_cache[code]
         else:
             self._caller_cache[code] = None
-            ## use of gc.get_referrers() was suggested by Michael Hudson
+            # use of gc.get_referrers() was suggested by Michael Hudson
             # all functions which refer to this code object
             funcs = [f for f in gc.get_referrers(code)
-                         if inspect.isfunction(f)]
+                     if inspect.isfunction(f)]
             # require len(func) == 1 to avoid ambiguity caused by calls to
             # new.function(): "In the face of ambiguity, refuse the
             # temptation to guess."
             if len(funcs) == 1:
                 dicts = [d for d in gc.get_referrers(funcs[0])
-                             if isinstance(d, dict)]
+                         if isinstance(d, dict)]
                 if len(dicts) == 1:
                     classes = [c for c in gc.get_referrers(dicts[0])
-                                   if hasattr(c, "__bases__")]
+                               if hasattr(c, "__bases__")]
                     if len(classes) == 1:
                         # ditto for new.classobj()
                         clsname = classes[0].__name__
@@ -209,6 +213,7 @@ class Follow(object):
         MSG_FORMAT = "{indent}{func_name}{class_name} <{filename}:{lineno}>"
 
         df = df.loc[~mask]
+
         def format(row):
             indent = row[0]
             filename = row[1]
@@ -227,7 +232,7 @@ class Follow(object):
 
         output = df.apply(format, axis=1, raw=True)
 
-        return output.tolist()
+        return output.values.tolist()
 
     def pprint(self, depth=None):
         output = self.gen_output(depth=depth)
@@ -237,23 +242,20 @@ class Follow(object):
         print(("\n".join(output)))
 
     def diff(self, right, depth):
-        if in_ipnb():
-            return self._html_diff(right=right, depth=depth)
-        else:
-            return self._text_diff(right=right, depth=depth)
+        left_output = self.gen_output(depth)
+        right_output = right.gen_output(depth)
+        return DiffOutput(left_output, right_output)
 
-    def _text_diff(self, right, depth):
-        output = self.gen_output(depth)
-        output2 = right.gen_output(depth)
 
+class DiffOutput:
+    def __init__(self, left_output, right_output):
+        self.left_output = left_output
+        self.right_output = right_output
+
+    def __repr__(self):
+        return '\n'.join(difflib.ndiff(self.left_output, self.right_output))
+
+    def _repr_html_(self):
         htmldiff = difflib.HtmlDiff()
-        return '\n'.join(difflib.ndiff(output, output2))
-
-    def _html_diff(self, right, depth):
-        from IPython.core.display import HTML
-        output = self.gen_output(depth)
-        output2 = right.gen_output(depth)
-
-        htmldiff = difflib.HtmlDiff()
-        diff = htmldiff.make_table(output, output2)
-        return HTML(diff)
+        diff = htmldiff.make_table(self.left_output, self.right_output)
+        return diff
