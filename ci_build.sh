@@ -1,5 +1,6 @@
 #!/bin/bash
 
+pip install cython
 pip install numpy
 pip install git+https://github.com/pandas-dev/pandas.git#egg=pandas
 pip install typeguard
