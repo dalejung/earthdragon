@@ -11,7 +11,7 @@ class Timer:
     """
     runs = []
 
-    def __init__(self, name='', verbose=True):
+    def __init__(self, name='noname', verbose=True):
         self.name = name
         self.verbose = verbose
         self.start = None
@@ -24,13 +24,13 @@ class Timer:
         Timer.runs = []
 
     def __enter__(self):
-        self.start = time.clock()
-        self.wall_start = time.time()
+        self.start = time.process_time()
+        self.wall_start = time.perf_counter()
         return self
 
     def __exit__(self, *args):
-        self.end = time.clock()
-        self.wall_end = time.time()
+        self.end = time.process_time()
+        self.wall_end = time.perf_counter()
         self.interval = self.end - self.start
         self.wall_interval = self.wall_end - self.wall_start
 
