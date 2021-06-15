@@ -101,7 +101,7 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
 
     # we're assuming self is not in *args for method calls
     args_names = argspec.args
-    if argspec.args[0] == 'self':
+    if len(args_names) > 0 and args_names[0] == 'self':
         args_names = args_names[1:]
 
     scope = SetOnceDict()
