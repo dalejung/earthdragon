@@ -18,6 +18,12 @@ class MemoryCache:
 
 class staticcache:
     orig_func = None
+
+    # Note that this is shared across all staticcache instances and is
+    # effectively global.
+    # caches are partitioned by the function namespace. The reason for this
+    # easier static caching when developing iteratively with a long running
+    # kernel.
     cache = {}
 
     def __init__(self, func=None, **kwargs):
