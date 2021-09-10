@@ -1,8 +1,81 @@
 import sys
 from pathlib import Path
 
+import linecache
+import os
+import inspect
 from line_profiler import LineProfiler as _LineProfiler
-from line_profiler import show_func
+from line_profiler.line_profiler import is_ipython_kernel_cell
+
+from .timer import (
+    format_time,
+)
+
+
+def show_func(filename, start_lineno, func_name, timings, unit,
+    output_unit=None, stream=None, stripzeros=False):
+    """ Show results for a single function.
+    """
+    if stream is None:
+        stream = sys.stdout
+
+    template = '%6s %9s %12s %8s %8s  %-s'
+    d = {}
+    total_time = 0.0
+    linenos = []
+    for lineno, nhits, time in timings:
+        total_time += time
+        linenos.append(lineno)
+
+    if stripzeros and total_time == 0:
+        return
+
+    if output_unit is None:
+        output_unit = unit
+    scalar = unit / output_unit
+
+    stream.write("Total time: %g s\n" % (total_time * unit))
+    if os.path.exists(filename) or is_ipython_kernel_cell(filename):
+        stream.write("File: %s\n" % filename)
+        stream.write("Function: %s at line %s\n" % (func_name, start_lineno))
+        if os.path.exists(filename):
+            # Clear the cache to ensure that we get up-to-date results.
+            linecache.clearcache()
+        all_lines = linecache.getlines(filename)
+        sublines = inspect.getblock(all_lines[start_lineno-1:])
+    else:
+        stream.write("\n")
+        stream.write("Could not find file %s\n" % filename)
+        stream.write("Are you sure you are running this program from the same directory\n")
+        stream.write("that you ran the profiler from?\n")
+        stream.write("Continuing without the function's contents.\n")
+        # Fake empty lines so we can see the timings, if not the code.
+        nlines = max(linenos) - min(min(linenos), start_lineno) + 1
+        sublines = [''] * nlines
+    for lineno, nhits, time in timings:
+        d[lineno] = (
+            nhits,
+            format_time(time * scalar, tmpl="{0:.3g} {1:<2}"),
+            '%5.1f' % (float(time) * scalar / nhits),
+            '%5.1f' % (100 * time / total_time)
+        )
+    linenos = range(start_lineno, start_lineno + len(sublines))
+    empty = ('', '', '', '')
+    header = template % ('Line #', 'Hits', 'Time', 'Per Hit', '% Time',
+        'Line Contents')
+    stream.write("\n")
+    stream.write(header)
+    stream.write("\n")
+    stream.write('=' * len(header))
+    stream.write("\n")
+    for lineno, line in zip(linenos, sublines):
+        nhits, time, per_hit, percent = d.get(lineno, empty)
+        txt = template % (lineno, nhits, time, per_hit, percent,
+                          line.rstrip('\n').rstrip('\r'))
+        stream.write(txt)
+        stream.write("\n")
+    stream.write("\n")
+
 
 class Profiler(object):
     """
@@ -84,9 +157,10 @@ class Profiler(object):
 
     def __enter__(self):
         self.profile.enable_by_count()
+        return self
 
     def __exit__(self, type, value, traceback):
         self.profile.disable_by_count()
 
         lstats = self.profile.get_stats()
-        self.show_text(lstats.timings, lstats.unit, output_unit=None, stream=None, stripzeros=False)
+        self.show_text(lstats.timings, lstats.unit, output_unit=1, stream=None, stripzeros=False)

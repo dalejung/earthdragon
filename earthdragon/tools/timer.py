@@ -1,5 +1,7 @@
 import time
 import sys
+import math
+
 
 class Timer:
     """
@@ -53,35 +55,44 @@ class Timer:
         return msg.format(**self.__dict__)
 
 # grabbed from IPython/core/magics/execution.py
-def _format_time(timespan, precision=3):
-    """Formats the timespan in a human readable form"""
-    import math
+def format_time(timestamp, precision=3, tmpl=None):
+    if tmpl is None:
+        tmpl = f"{{0:.{precision}g}}{{1}}"
+    return " ".join(map(lambda x: tmpl.format(*x), _format_time(timestamp)))
+
+def _format_time(timespan):
+    """
+    Formats the timespan in a human readable form
+
+    Expects timespan in seconds.
+    """
 
     if timespan >= 60.0:
         # we have more than a minute, format that in a human readable form
         # Idea from http://snipplr.com/view/5713/
-        parts = [("d", 60*60*24),("h", 60*60),("min", 60), ("s", 1)]
+        parts = [('d', 60*60*24), ('h', 60*60), ('min', 60), ('s', 1)]
         time = []
         leftover = timespan
         for suffix, length in parts:
             value = int(leftover / length)
             if value > 0:
                 leftover = leftover % length
-                time.append('%s%s' % (str(value), suffix))
-            if leftover < 1:
-                break
-        return " ".join(time)
-
+                time.append(u'%s%s' % (str(value), suffix))
+                yield value, suffix
+                if leftover < 1:
+                    break
+        return
 
     # Unfortunately the unicode 'micro' symbol can cause problems in
     # certain terminals.
     # See bug: https://bugs.launchpad.net/ipython/+bug/348466
     # Try to prevent crashes by being more secure than it needs to
-    units = ["s", "ms",'us',"ns"] # the save value
+    # E.g. eclipse is able to print a µ, but has no sys.stdout.encoding set.
+    units = ['s', 'ms', 'us', 'ns']  # the save value
     if hasattr(sys.stdout, 'encoding') and sys.stdout.encoding:
         try:
             '\xb5'.encode(sys.stdout.encoding)
-            units = ["s", "ms",'\xb5s',"ns"]
+            units = ['s', 'ms', '\xb5s', 'ns']
         except:
             pass
     scaling = [1, 1e3, 1e6, 1e9]
@@ -90,6 +101,6 @@ def _format_time(timespan, precision=3):
         order = min(-int(math.floor(math.log10(timespan)) // 3), 3)
     else:
         order = 3
-    ret =  "%.*g %s" % (precision, timespan * scaling[order], units[order])
-    return ret
-
+    value = timespan * scaling[order]
+    suffix = units[order]
+    yield value, suffix
