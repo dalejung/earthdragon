@@ -77,7 +77,11 @@ class staticcache:
         if not isinstance(invoked_args, collections.Hashable):
             return None
 
-        key = hash(invoked_args)
+        try:
+            key = hash(invoked_args)
+        except TypeError:
+            return None
+
         return key
 
     def set_func(self, func):

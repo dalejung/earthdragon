@@ -42,8 +42,8 @@ class Timer:
     @property
     def msg(self):
         msg = "Run {name}: CPU time: {interval}  Wall time: {wall_interval}"
-        return msg.format(name=self.name, interval=_format_time(self.interval),
-                         wall_interval=_format_time(self.wall_interval))
+        return msg.format(name=self.name, interval=format_time(self.interval),
+                         wall_interval=format_time(self.wall_interval))
 
     def __str__(self):
         return self.msg
