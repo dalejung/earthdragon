@@ -1,6 +1,7 @@
 import sys
 from pdb import Pdb
-from ipdb.__main__ import update_stdout, def_colors, wrap_sys_excepthook
+from ipdb.__main__ import wrap_sys_excepthook
+from ipdb.stdout import update_stdout
 
 class Tdb(Pdb):
     def __init__(self, *args, **kwargs):
@@ -66,7 +67,6 @@ class Tdb(Pdb):
         wrap_sys_excepthook()
         if frame is None:
             frame = sys._getframe().f_back
-        #pdb = Tdb(def_colors)
         self.reset()
         self.set_step()
         sys.settrace(self.trace_dispatch)
@@ -93,7 +93,7 @@ class DebugTrace(object):
     (Pdb)
     """
     def __init__(self, *args):
-        self.tdb = Tdb(def_colors)
+        self.tdb = Tdb()
 
         funcs = list(filter(callable, args))
         for func in funcs:
