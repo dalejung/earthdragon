@@ -1,7 +1,8 @@
 import inspect
 import types
 import gc
-import collections
+
+from collections.abc import MutableMapping
 
 from typing import Union, Callable, Any
 
@@ -16,7 +17,7 @@ except AttributeError:
     argspec_type = inspect.ArgSpec
 
 
-class SetOnceDict(collections.MutableMapping):
+class SetOnceDict(MutableMapping):
 
     def __init__(self):
         self._scope = {}
@@ -57,7 +58,7 @@ class SetOnceDict(collections.MutableMapping):
     def __hash__(self):
         items = []
         for k, v in self._scope.items():
-            if isinstance(v, collections.MutableMapping):
+            if isinstance(v, MutableMapping):
                 v = frozenset(v.items())
             items.append((k, v))
         return hash(frozenset(items))

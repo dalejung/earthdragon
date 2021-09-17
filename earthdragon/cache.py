@@ -88,3 +88,13 @@ class staticcache:
         self.orig_func = func
         ns = get_func_ns(func)
         self.ns = ns
+
+    def clear(self, *args, **kwargs):
+        ns = self.ns
+        if ns not in self.cache:
+            return
+
+        ns_cache = self.cache.get(ns)
+        key = self.get_cache_key(*args, **kwargs)
+        if key in ns_cache:
+            del ns_cache[key]
