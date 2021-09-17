@@ -107,9 +107,11 @@ class Profiler(object):
     3552         1         1603   1603.0     99.1                                      skipna=skipna, numeric_only=numeric_only)
 
     """
-    def __init__(self, *args):
+    def __init__(self, *args, stream=None):
         self.profile = _LineProfiler()
         self.func_paths = {}
+
+        self.stream = stream
 
         if len(args) > 0:
             for func in args:
@@ -154,6 +156,10 @@ class Profiler(object):
             show_func(abs_path, lineno, name, stats[fn, lineno, name], unit,
                 output_unit=output_unit, stream=stream, stripzeros=stripzeros)
 
+    @property
+    def lstats(self):
+        lstats = self.profile.get_stats()
+        return lstats
 
     def __enter__(self):
         self.profile.enable_by_count()
@@ -161,6 +167,5 @@ class Profiler(object):
 
     def __exit__(self, type, value, traceback):
         self.profile.disable_by_count()
-
-        lstats = self.profile.get_stats()
-        self.show_text(lstats.timings, lstats.unit, output_unit=1, stream=None, stripzeros=False)
+        lstats = self.lstats
+        self.show_text(lstats.timings, lstats.unit, output_unit=1, stream=self.stream, stripzeros=False)
