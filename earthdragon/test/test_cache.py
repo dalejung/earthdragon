@@ -63,7 +63,7 @@ def test_decorator_async():
         res2 = loop.run_until_complete(asyncfunc(3))
         after = time.monotonic()
         # check that we use cache and don't sleep
-        assert after - before < .0001
+        assert after - before < .001
 
         assert res1 == res2
 
