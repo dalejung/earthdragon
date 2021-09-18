@@ -1,6 +1,6 @@
 import unittest
 
-import nose.tools as nt
+import pytest
 
 from ..typelet import (
         Int,
@@ -12,13 +12,13 @@ from ..typelet import (
         Unicode,
         _missing
 )
-import imp;
 from .. import util
-imp.reload(util)
 from ..util import TypeletMeta, inflate, InvalidInitInvocation
+
 
 class V:
     pass
+
 
 class ExampleObj(metaclass=TypeletMeta):
     dct = Dict(int)
@@ -27,44 +27,48 @@ class ExampleObj(metaclass=TypeletMeta):
     num = Int(default=10)
     fl = Float()
 
+
 class DictTestCase(unittest.TestCase):
     def test_validate(self):
-        with nt.assert_raises(TypeletError):
+        with pytest.raises(TypeletError):
             ex = ExampleObj()
             ex.dct = []
 
         ex = ExampleObj()
         ex.dct = {'int1': 123, 3: 123}
-        nt.assert_count_equal(ex.dct, ['int1', 3])
+        self.assertCountEqual(ex.dct, ['int1', 3])
 
-        with nt.assert_raises(TypeletError):
+        with pytest.raises(TypeletError):
             ex.dct = {'int1': 123, 'float1': 1.1}
 
     def test_keyclass(self):
-        with nt.assert_raises(KeyTypeError):
+        with pytest.raises(KeyTypeError):
             ex = ExampleObj()
             ex.dct_key = {'int1': 123, 3: 123}
 
+
 class ListTestCase(unittest.TestCase):
     def test_validate(self):
-        with nt.assert_raises(TypeletError):
+        with pytest.raises(TypeletError):
             ex = ExampleObj()
             ex.lst = {}
 
         ex = ExampleObj()
         ex.lst = [V(), V()]
 
-        with nt.assert_raises(TypeletError):
+        with pytest.raises(TypeletError):
             ex.lst = [V(), V(), 3]
+
 
 class IntTestCase(unittest.TestCase):
     def test_default(self):
         obj = ExampleObj()
-        nt.assert_equal(obj.num, 10)
+        assert obj.num == 10
         # default still goes through normal validation
-        with nt.assert_raises(TypeletError):
+        with pytest.raises(TypeletError):
             class BadDefault:
                 bad_num = Int(default='10')
+
 
 class FloatTestCase(unittest.TestCase):
     def test_validate(self):
@@ -72,33 +76,49 @@ class FloatTestCase(unittest.TestCase):
         obj.fl = 0.133
         obj.fl = 10
         obj.fl = 1.3
-        with nt.assert_raises(TypeletError):
+        with pytest.raises(TypeletError):
             obj.fl = "DALE"
 
-def test_typelet_meta():
-    class Parent(metaclass=TypeletMeta):
-        parent_int = Int()
 
-    class Child(Parent):
-        child_int = Int()
+class TypeletTestCase(unittest.TestCase):
+    def test_typelet_meta(self):
+        class Parent(metaclass=TypeletMeta):
+            parent_int = Int()
 
-    class GrandChild(Child):
-        gc_int = Int()
-        gc_float = Float()
+        class Child(Parent):
+            child_int = Int()
 
-    p = Parent()
-    nt.assert_count_equal(p._earthdragon_merged_typelets.keys(), ['parent_int'])
+        class GrandChild(Child):
+            gc_int = Int()
+            gc_float = Float()
 
-    # child should have both parent and child typelets
-    c = Child()
-    nt.assert_count_equal(c._earthdragon_merged_typelets.keys(), ['child_int', 'parent_int'])
-    nt.assert_count_equal(c._earthdragon_typelets.keys(), ['child_int'])
+        p = Parent()
+        self.assertCountEqual(
+            p._earthdragon_merged_typelets.keys(),
+            ['parent_int']
+        )
 
-    gc = GrandChild()
-    nt.assert_count_equal(gc._earthdragon_merged_typelets.keys(),
-            ['child_int', 'parent_int', 'gc_int', 'gc_float'])
-    nt.assert_count_equal(gc._earthdragon_typelets.keys(),
-            ['gc_int', 'gc_float'])
+        # child should have both parent and child typelets
+        c = Child()
+        self.assertCountEqual(
+            c._earthdragon_merged_typelets.keys(),
+            ['child_int', 'parent_int']
+        )
+        self.assertCountEqual(
+            c._earthdragon_typelets.keys(),
+            ['child_int']
+        )
+
+        gc = GrandChild()
+        self.assertCountEqual(
+            gc._earthdragon_merged_typelets.keys(),
+            ['child_int', 'parent_int', 'gc_int', 'gc_float']
+        )
+        self.assertCountEqual(
+            gc._earthdragon_typelets.keys(),
+            ['gc_int', 'gc_float']
+        )
+
 
 class InflateObj(metaclass=TypeletMeta):
     dct = Dict(int)
@@ -106,33 +126,36 @@ class InflateObj(metaclass=TypeletMeta):
     num = Int(default=10)
     num2 = Int()
 
+
 def test_inflate_kwargs():
     obj = InflateObj()
-    state = {'fl' : 1.1, 'dct': {'test':1}, 'num': 1}
+    state = {'fl': 1.1, 'dct': {'test': 1}, 'num': 1}
     inflate(obj, [], state, require_all=False)
-    nt.assert_equal(obj.fl, 1.1)
-    nt.assert_equal(obj.dct, state['dct'])
-    nt.assert_equal(obj.num, 1)
-    nt.assert_is_none(obj.num2)
+    assert obj.fl == 1.1
+    assert obj.dct == state['dct']
+    assert obj.num == 1
+    assert obj.num2 is None
+
 
 def test_inflate_already_filled():
     # testing when keyword tries to fill in something filled by *args
     obj = InflateObj()
-    state = {'fl' : 1.1, 'dct': {'test':1}}
-    with nt.assert_raises_regex(InvalidInitInvocation, "Already filled in"):
+    state = {'fl': 1.1, 'dct': {'test': 1}}
+    with pytest.raises(InvalidInitInvocation, match="Already filled in"):
         inflate(obj, [{'first': 2}], state, require_all=False)
+
 
 def test_inflate_args():
     obj = InflateObj()
     args = [{'hi': 123}, 1.3]
-    with nt.assert_raises_regex(InvalidInitInvocation, "Need to fill all args"):
+    with pytest.raises(InvalidInitInvocation, match="Need to fill all args"):
         inflate(obj, args, {}, require_all=True)
 
     inflate(obj, args, {}, require_all=False)
-    nt.assert_equal(obj.fl, 1.3)
-    nt.assert_is_none(obj.num2)
+    assert obj.fl == 1.3
+    assert obj.num2 is None
 
-    with nt.assert_raises_regex(InvalidInitInvocation, "Passed too many"):
+    with pytest.raises(InvalidInitInvocation, match="Passed too many"):
         too_many_args = [{'hi': 123}, 1.3, 11, 13, 'too many']
         inflate(obj, too_many_args, {}, require_all=False)
 
@@ -152,23 +175,22 @@ def test_inflate_in_class():
         def __init__(self, *args, **kwargs):
             inflate(self, args, kwargs, require_all=True)
 
-
     obj = InflateClass(id=1, name="Dale")
-    nt.assert_equal(obj.name, 'Dale')
-    nt.assert_equal(obj.id, 1) 
+    assert obj.name == 'Dale'
+    assert obj.id == 1
 
     # pass in wrong type
-    with nt.assert_raises(TypeletError):
+    with pytest.raises(TypeletError):
         obj = InflateClass(id=1.1, name="Dale")
 
-    with nt.assert_raises_regex(InvalidInitInvocation, "Need to fill all args"):
+    with pytest.raises(InvalidInitInvocation, match="Need to fill all args"):
         obj = InflateClass(name="Dale")
 
     # we only inflate current class typelets and not ancestors
-    with nt.assert_raises_regex(InvalidInitInvocation, "Pass non typelet"):
+    with pytest.raises(InvalidInitInvocation, match="Pass non typelet"):
         obj = InflateClass(id=1, name="Dale", blah=123)
 
-    nt.assert_in('blah', InflateClass._earthdragon_merged_typelets)
+    assert 'blah' in InflateClass._earthdragon_merged_typelets
 
 
 def test_inflate_in_class_loose():
@@ -185,12 +207,12 @@ def test_inflate_in_class_loose():
             inflate(self, args, kwargs, typelets_only=False, require_all=False)
 
     obj = InflateLooseClass(id=13)
-    nt.assert_equal(obj.id, 13)
-    nt.assert_is_none(obj.name)
-    nt.assert_is_none(obj.balance)
+    assert obj.id == 13
+    assert obj.name is None
+    assert obj.balance is None
 
     obj.balance = 1
-    nt.assert_equal(obj.balance, 1)
+    assert obj.balance == 1
 
 
 def test_required():
@@ -207,11 +229,11 @@ def test_required():
         def __init__(self, *args, **kwargs):
             inflate(self, args, kwargs)
 
-    with nt.assert_raises_regex(InvalidInitInvocation, "All required typelets"):
+    with pytest.raises(InvalidInitInvocation, match="All required typelets"):
         obj = InflateRequired(id=1)
 
     obj = InflateRequired(id=1, name="Dale")
-    nt.assert_equal(obj.name, "Dale")
+    assert obj.name == 'Dale'
 
 
 def test_inherited_inflate():
@@ -233,7 +255,8 @@ def test_inherited_inflate():
         c_age = Int()
 
         def __init__(self, c_id, c_age=_missing, *args, **kwargs):
-            inflate(self, [c_id, c_age], {}, typelets_only=False, cls=__class__)
+            inflate(self, [c_id, c_age], {}, typelets_only=False,
+                    cls=__class__)
             super().__init__(*args, **kwargs)
 
     class GrandChild(Child):
@@ -245,7 +268,7 @@ def test_inherited_inflate():
             super().__init__(*args, **kwargs)
 
     gc = GrandChild(1, 'Dale', 123)
-    nt.assert_equal(gc.gc_id, 1)
-    nt.assert_equal(gc.gc_name, 'Dale')
-    nt.assert_equal(gc.c_id, 123)
-    nt.assert_equal(gc.p_id, -1)
+    assert gc.gc_id == 1
+    assert gc.gc_name == 'Dale'
+    assert gc.c_id == 123
+    assert gc.p_id == -1

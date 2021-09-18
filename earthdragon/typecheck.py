@@ -7,7 +7,9 @@ try:
     import typeguard
     _runtime_typecheck_module = True
 except ImportError:
+    print('typeguard was not imported. earthdragon.typecheck not enabled')
     pass
+
 
 class TypeCheckManager:
     def __init__(self):
@@ -37,7 +39,6 @@ class TypeCheckManager:
         if not _runtime_typecheck_module:
             return False, [full_module]
 
-
         # go up module tree looking for magic var
 
         tree = module_tree(full_module)
@@ -54,6 +55,7 @@ class TypeCheckManager:
     def reset(self):
         self.enabled_registry = {}
         self.proxies = []
+
 
 def module_tree(module: str):
     tree = []
@@ -97,25 +99,31 @@ class TypeCheckProxy:
 
         return self.wrapped(*args, **kwargs)
 
+
 # singleton api
 _MANAGER = TypeCheckManager()
+
 
 def typecheck_enable(module: str):
     """ enable typecheck for moduele """
     _MANAGER.toggle(module, True)
 
+
 def typecheck_disable(module: str):
     _MANAGER.toggle(module, False)
+
 
 def is_typecheck_enabled(func, full_module=None):
     if full_module is None:
         full_module = func.__module__
     return _MANAGER.check_module_enabled(full_module)
 
+
 def typecheck(func):
     typecheck_proxy = TypeCheckProxy(func)
     _MANAGER.add_proxy(typecheck_proxy)
     return typecheck_proxy
+
 
 def reset_manager():
     _MANAGER.reset()

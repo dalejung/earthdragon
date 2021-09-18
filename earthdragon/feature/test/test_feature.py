@@ -91,7 +91,7 @@ def test_simple_init():
         def __init__(self, hi):
             self.hi = hi
 
-    assert SimpleInit.__init__.orig_func is True
+    assert SimpleInit.__init__.orig_func
 
 
 def test_hooks_called_once():

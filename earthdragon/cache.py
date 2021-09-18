@@ -1,4 +1,4 @@
-import collections
+from collections.abc import Hashable
 import types
 import asyncio
 
@@ -74,7 +74,7 @@ class staticcache:
 
         invoked_args = get_invoked_args(self.orig_func, *args, **kwargs)
 
-        if not isinstance(invoked_args, collections.Hashable):
+        if not isinstance(invoked_args, Hashable):
             return None
 
         try:

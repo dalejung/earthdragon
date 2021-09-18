@@ -9,7 +9,7 @@ def test_combine_func():
     c = Attr.combine(a, b)
 
     # func should have proogated
-    assert c.decorator.orig_func is True
+    assert c.decorator.orig_func
     assert c.decorator(1) == 3
 
     # switch order

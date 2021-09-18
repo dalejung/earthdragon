@@ -113,7 +113,7 @@ def test_anchor_meta():
     assert b3.init_args == [3]
     ret = b3.shout('hi')
     assert ret == 'hihi'
-    assert b2.logs == ['hi', 'hi2']
+    assert b3.logs == ['hi', 'hi2']
     assert b3.shout.hooks == [Blah2.log.func, Blah3.log3.func]
 
 

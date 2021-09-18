@@ -41,11 +41,12 @@ def test_decorator_kwargs():
 
 
 def test_decorator_async():
+    sleep_time = .1
     loop = asyncio.new_event_loop()
 
     @staticcache
     async def asyncfunc(dale=1):
-        await asyncio.sleep(1, loop=loop)
+        await asyncio.sleep(sleep_time)
         return time.monotonic()
 
     try:
@@ -55,13 +56,14 @@ def test_decorator_async():
         before = time.monotonic()
         res1 = loop.run_until_complete(asyncfunc(3))
         after = time.monotonic()
-        assert after - before >= 1
+        assert after - before >= sleep_time
 
         # this one should cache
         before = time.monotonic()
         res2 = loop.run_until_complete(asyncfunc(3))
         after = time.monotonic()
-        assert after - before < .001
+        # check that we use cache and don't sleep
+        assert after - before < .0001
 
         assert res1 == res2
 
@@ -69,7 +71,8 @@ def test_decorator_async():
         before = time.monotonic()
         res3 = loop.run_until_complete(asyncfunc(2))
         after = time.monotonic()
-        assert after - before >= 1
+        # we should be sleeping again since new arg
+        assert after - before >= sleep_time
         assert res3 != res1
 
     finally:
