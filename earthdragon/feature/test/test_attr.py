@@ -1,6 +1,7 @@
-import nose.tools as nt
+import pytest
 
 from ..attr import Attr
+
 
 def test_combine_func():
     a = Attr(lambda x: x+1)
@@ -8,16 +9,17 @@ def test_combine_func():
     c = Attr.combine(a, b)
 
     # func should have proogated
-    nt.assert_true(c.decorator.orig_func)
-    nt.assert_equal(c.decorator(1), 3)
+    assert c.decorator.orig_func is True
+    assert c.decorator(1) == 3
 
     # switch order
     d = Attr.combine(b, a)
-    nt.assert_equal(d.decorator(1), 2)
+    assert d.decorator(1) == 2
 
     # add attr without func
     f = Attr.combine(b, a, Attr())
-    nt.assert_equal(f.decorator(1), 2)
+    assert f.decorator(1) == 2
+
 
 def test_combine_pipeline():
     a = Attr(lambda x: x+1)
@@ -28,14 +30,18 @@ def test_combine_pipeline():
     c = Attr.combine(a, b)
 
     # should be equivalent of ((x + 2) ** (x + 2) - 10)
-    correct = lambda x: ((x + 2) ** (x + 2) - 10)
-    nt.assert_equal(c.decorator(10), correct(10))
+    def correct(x):
+        return ((x + 2) ** (x + 2) - 10)
+
+    assert c.decorator(10) == correct(10)
+
 
 def test_combine_empty_attr():
     a = Attr()
     b = Attr()
     c = Attr.combine(a, b)
-    nt.assert_is_none(c.decorator.orig_func)
+    assert c.decorator.orig_func is None
+
 
 def test_find_orig_func():
     class GrandFather:
@@ -51,11 +57,11 @@ def test_find_orig_func():
         a.add_pipeline(lambda x: x+1)
 
     p = Parent()
-    nt.assert_equal(p.a(), 3)
+    assert p.a() == 3
 
     # note that the pipeline does not cascade
     # Attr only finds the original func.
     # the propogate is done via metaclass
     # this behavior could change...
     c = Child()
-    nt.assert_equal(c.a(), 2)
+    assert c.a() == 2

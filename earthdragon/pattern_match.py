@@ -131,6 +131,8 @@ def config_from_subscript(sub):
     block = None
     if isinstance(sub.slice, ast.ExtSlice):
         items = sub.slice.dims
+    elif isinstance(sub.slice, ast.Tuple):
+        items = sub.slice.elts
     else:
         items = [sub.slice]
 
@@ -143,14 +145,25 @@ def config_from_subscript(sub):
 
 
 def process_item(item):
+    """
+    Convert indexers in a subscript.
+
+    NOTE: ast.Index is a pre 3.9 type. It is going bye bye.
+    """
     if isinstance(item, ast.Slice):
         name = unwrap(item.lower)
         value = item.upper
         return name, value
 
+    # due to ast.Index going away in 3.9, simple indices are just the value
+    # themselves.
+    if isinstance(item, ast.Name):
+        return None, item
+
     if isinstance(item, ast.Index):
         return None, item.value
-    raise TypeError()
+
+    raise TypeError(f"{type(item)} type not handled")
 
 
 def get_meta(sub):
@@ -302,6 +315,9 @@ class PatternBuilder:
         return build_pattern(obj)
 
     def process_pattern_NameConstant(self, pnode):
+        return build_pattern(pnode.value)
+
+    def process_pattern_Constant(self, pnode):
         return build_pattern(pnode.value)
 
     def process_pattern_Str(self, pnode):

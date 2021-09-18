@@ -1,3 +1,5 @@
+import pytest
+
 from earthdragon.typelet import Bool
 from earthdragon.multidecorator import (
     MultiDecorator,
@@ -7,7 +9,6 @@ from earthdragon.multidecorator import (
     first
 )
 
-import nose.tools as nt
 from ... import feature
 from ...feature import features, FeatureBase, Attr
 from earthdragon.context import WithScope
@@ -28,6 +29,7 @@ class BareFeature:
     # but we do nmot provide an init
     __init__.add_hook(touch_init)
 
+
 class WootFeature:
 
     @only_self
@@ -37,6 +39,7 @@ class WootFeature:
 
     __init__ = Attr()
     __init__.add_hook(woot_init)
+
 
 def test_feature():
     @features(BareFeature)
@@ -49,13 +52,14 @@ def test_feature():
             self.arg = arg
 
     ni = NoInit()
-    nt.assert_equal(ni.touched, True)
-    nt.assert_equal(ni.init_feature, 13)
+    assert ni.touched is True
+    assert ni.init_feature == 13
 
     fi = FirstInit(1)
-    nt.assert_equal(fi.arg, 1)
-    nt.assert_equal(fi.touched, True)
-    nt.assert_equal(fi.init_feature, 13)
+    assert fi.arg == 1
+    assert fi.touched is True
+    assert fi.init_feature == 13
+
 
 def test_multiple_feature():
 
@@ -68,13 +72,13 @@ def test_multiple_feature():
         pass
 
     # should get it's own copy
-    nt.assert_is_not(NoInit.__init__, MultipleFeature.__init__)
+    assert NoInit.__init__ is not MultipleFeature.__init__
 
     f = MultipleFeature()
 
-    nt.assert_equal(f.touched, True)
-    nt.assert_in('woot', f.__dict__)
-    nt.assert_equal(f.woot, True)
+    assert f.touched is True
+    assert 'woot' in f.__dict__
+    assert f.woot is True
 
 
 def test_simple_init():
@@ -87,10 +91,12 @@ def test_simple_init():
         def __init__(self, hi):
             self.hi = hi
 
-    nt.assert_true(SimpleInit.__init__.orig_func)
+    assert SimpleInit.__init__.orig_func is True
+
 
 def test_hooks_called_once():
     count = 0
+
     def transform(func):
         nonlocal count
         count += 1
@@ -98,6 +104,7 @@ def test_hooks_called_once():
         return func
 
     EVENTS = []
+
     def hook(self):
         EVENTS.append(self)
         yield
@@ -110,7 +117,6 @@ def test_hooks_called_once():
         __init__.add_transform(transform)
         __init__.add_hook(hook)
 
-
     class Child(Parent):
         def __init__(self):
             self.child_init = True
@@ -118,8 +124,8 @@ def test_hooks_called_once():
 
     c = Child()
     # both inits called
-    nt.assert_true(c.parent_init)
-    nt.assert_true(c.child_init)
+    assert c.parent_init is True
+    assert c.child_init is True
     # wrapper funcs called once
-    nt.assert_equal(count, 1)
-    nt.assert_list_equal(EVENTS, [c])
+    assert count == 1
+    assert EVENTS == [c]

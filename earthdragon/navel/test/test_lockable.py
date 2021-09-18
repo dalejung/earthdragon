@@ -1,4 +1,4 @@
-import nose.tools as nt
+import pytest
 
 from ..lockable import Lockable, mutate, UnexpectedMutationError
 from earthdragon.feature import features, FeatureBase
@@ -17,12 +17,14 @@ def test_lockable():
             self.bob = bob
     s = Something(1)
     s.change_bob(3)
-    nt.assert_equal(s.bob, 3)
-    with nt.assert_raises(UnexpectedMutationError):
+    assert s.bob == 3
+
+    with pytest.raises(UnexpectedMutationError):
         s.bad(10)
 
-    with nt.assert_raises(UnexpectedMutationError):
+    with pytest.raises(UnexpectedMutationError):
         s.bob = 1
+
 
 def test_nested_lockable():
     """
@@ -40,5 +42,5 @@ def test_nested_lockable():
             self.bob = bob
 
     s = Super(1)
-    with nt.assert_raises(UnexpectedMutationError):
+    with pytest.raises(UnexpectedMutationError):
         s.bob = 1
