@@ -1,6 +1,7 @@
 import inspect
 import types
 import gc
+import functools
 
 from collections.abc import MutableMapping
 
@@ -216,3 +217,33 @@ def get_parent(code):
             return ref.__qualname__.rsplit('.', 1)[0]
 
     return None
+
+
+def get_class_that_defined_method(meth):
+    """
+    Largely taken from https://stackoverflow.com/a/25959545/376837.
+    """
+    if isinstance(meth, functools.partial):
+        return get_class_that_defined_method(meth.func)
+
+    if inspect.ismethod(meth) or (
+        inspect.isbuiltin(meth)
+        and getattr(meth, '__self__', None) is not None
+        and getattr(meth.__self__, '__class__', None)
+    ):
+        for cls in inspect.getmro(meth.__self__.__class__):
+            if meth.__name__ in cls.__dict__:
+                return cls
+        # fallback to __qualname__ parsing
+        meth = getattr(meth, '__func__', meth)
+
+    if inspect.isfunction(meth):
+        meth_mod = inspect.getmodule(meth),
+        qualname = meth.__qualname__
+        meth_class_name = qualname.split('.<locals>', 1)[0].rsplit('.', 1)[0]
+        cls = getattr(meth_mod, meth_class_name, None)
+        if isinstance(cls, type):
+            return cls
+
+    # handle special descriptor objects
+    return getattr(meth, '__objclass__', None)
