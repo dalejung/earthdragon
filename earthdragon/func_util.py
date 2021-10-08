@@ -4,6 +4,7 @@ import gc
 import functools
 
 from collections.abc import MutableMapping
+from collections import UserDict
 
 from typing import Union, Callable, Any
 
@@ -18,47 +19,16 @@ except AttributeError:
     argspec_type = inspect.ArgSpec
 
 
-class SetOnceDict(MutableMapping):
-
-    def __init__(self):
-        self._scope = {}
-
-    def __delitem__(self, key):
-        return self._scope.__delitem__(key)
-
-    def __len__(self, key):
-        return self._scope.__len__(key)
-
-    def __getitem__(self, key):
-        return self._scope.__getitem__(key)
-
-    def __iter__(self):
-        return self._scope.__iter__()
+class SetOnceDict(UserDict):
 
     def __setitem__(self, key, value):
-        if key in self._scope:
+        if key in self:
             raise KeyError(f"{key} has already been set")
-        self._scope.__setitem__(key, value)
-
-    def update(self, *args, **kwargs):
-        # copy logic of builtin dict
-        for dct in args:
-            if hasattr(dct, 'keys'):
-                for k in dct:
-                    self[k] = dct[k]
-            else:
-                for k, v in dct.items():
-                    self[k] = v
-
-        for k in kwargs:
-            self[k] = kwargs[k]
-
-    def __repr__(self):
-        return 'Scope:' + repr(self._scope)
+        super().__setitem__(key, value)
 
     def __hash__(self):
         items = []
-        for k, v in self._scope.items():
+        for k, v in self.items():
             if isinstance(v, MutableMapping):
                 v = frozenset(v.items())
             items.append((k, v))
