@@ -3,12 +3,10 @@ import types
 import gc
 import functools
 
-from collections.abc import MutableMapping
-from collections import UserDict
-
 from typing import Union, Callable, Any
 
 from .typecheck import typecheck
+from .container import SetOnceDict
 
 
 try:
@@ -18,21 +16,6 @@ except AttributeError:
     get_argspec = inspect.getargspec
     argspec_type = inspect.ArgSpec
 
-
-class SetOnceDict(UserDict):
-
-    def __setitem__(self, key, value):
-        if key in self:
-            raise KeyError(f"{key} has already been set")
-        super().__setitem__(key, value)
-
-    def __hash__(self):
-        items = []
-        for k, v in self.items():
-            if isinstance(v, MutableMapping):
-                v = frozenset(v.items())
-            items.append((k, v))
-        return hash(frozenset(items))
 
 
 def make_cell(value):
