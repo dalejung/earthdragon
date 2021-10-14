@@ -17,6 +17,12 @@ except AttributeError:
     argspec_type = inspect.ArgSpec
 
 
+def get_func_ns(func):
+    func_name = func.__name__
+    module = func.__module__
+    ns = f'{module}.{func_name}'
+    return ns
+
 
 def make_cell(value):
     # http://nedbatchelder.com/blog/201301/byterun_and_making_cells.html

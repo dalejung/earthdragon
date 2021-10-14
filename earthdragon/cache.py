@@ -2,14 +2,7 @@ from collections.abc import Hashable
 import types
 import asyncio
 
-from .func_util import get_invoked_args
-
-
-def get_func_ns(func):
-    func_name = func.__name__
-    module = func.__module__
-    ns = f'{module}.{func_name}'
-    return ns
+from .func_util import get_invoked_args, get_func_ns
 
 
 class MemoryCache:
