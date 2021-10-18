@@ -1,11 +1,33 @@
 import pytest # noqa
 
 from ..func_util import (
-    get_invoked_args
+    get_invoked_args,
+    get_func_ns,
+    make_cell,
 )
 
 from . import util
 util.preamble()
+
+
+# here to test get_func_ns
+def fake_func():
+    pass
+
+
+def test_func_ns():
+    def nested_func():
+        pass
+    func_ns = get_func_ns(fake_func)
+    assert func_ns.startswith('earthdragon.test.test_func_util')
+
+    # honestly not sure what this should be. Just putting this here to specify
+    # current behavior
+    nested_func_ns = get_func_ns(nested_func)
+    assert nested_func_ns == 'earthdragon.test.test_func_util.nested_func'
+
+    func_ns = get_func_ns(make_cell)
+    assert func_ns == 'earthdragon.func_util.make_cell'
 
 
 def test_get_invoked_args_nodefaults():

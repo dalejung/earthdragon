@@ -20,6 +20,9 @@ except AttributeError:
 def get_func_ns(func):
     func_name = func.__name__
     module = func.__module__
+    if module == '__main__':
+        import __main__
+        module = __main__.__spec__.name
     ns = f'{module}.{func_name}'
     return ns
 

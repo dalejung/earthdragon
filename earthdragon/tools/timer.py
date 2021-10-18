@@ -54,6 +54,10 @@ class Timer:
         msg = "Timer(name={name}, interval={interval},wall_interval={wall_interval})"
         return msg.format(**self.__dict__)
 
+    @property
+    def wall_interval_string(self):
+        return format_time(self.wall_interval)
+
 # grabbed from IPython/core/magics/execution.py
 def format_time(timestamp, precision=3, tmpl=None):
     if tmpl is None:
