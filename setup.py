@@ -9,6 +9,7 @@ setup(
     packages=['earthdragon'],
     install_requires = [
         'asttools',
-        'toolz'
+        'toolz',
+        'typeguard',
     ]
 )

@@ -27,3 +27,6 @@ def test_typecheck_enable_module():
     typecheck_enable('fakepkg.fakemod1')
     assert is_typecheck_enabled(None, full_module='fakepkg.fakemod1') is True
     assert is_typecheck_enabled(None, full_module='fakepkg.fakemod2') is False
+
+def test_typeguard():
+    import typeguard
