@@ -10,11 +10,20 @@ from .container import SetOnceDict
 
 
 try:
-    get_argspec = inspect.getfullargspec
+    _get_argspec = inspect.getfullargspec
     argspec_type = inspect.FullArgSpec
 except AttributeError:
-    get_argspec = inspect.getargspec
+    _get_argspec = inspect.getargspec
     argspec_type = inspect.ArgSpec
+
+
+def get_argspec(func):
+    # handle functools.wraps functions
+    if hasattr(func, '__wrapped__'):
+        argspec = _get_argspec(func.__wrapped__)
+    else:
+        argspec = _get_argspec(func)
+    return argspec
 
 
 def resolve_module(obj):
@@ -35,6 +44,13 @@ def get_func_ns(func):
     info = get_name_module(func)
     ns = '{module}.{name}'.format(**info)
     return ns
+
+
+def get_func_manifest(func):
+    info = get_name_module(func)
+    info['argspec'] = get_argspec(func)
+    info['wrapped'] = hasattr(func, '__wrapped__')
+    return info
 
 
 def make_cell(value):
@@ -67,11 +83,7 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
     scope would be based on variables passed in
     """
     if not isinstance(argspec, argspec_type):
-        # handle functools.wraps functions
-        if hasattr(argspec, '__wrapped__'):
-            argspec = get_argspec(argspec.__wrapped__)
-        else:
-            argspec = get_argspec(argspec)
+        argspec = get_argspec(argspec)
 
     # we're assuming self is not in *args for method calls
     args_names = argspec.args
