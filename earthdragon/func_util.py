@@ -17,13 +17,23 @@ except AttributeError:
     argspec_type = inspect.ArgSpec
 
 
-def get_func_ns(func):
-    func_name = func.__name__
-    module = func.__module__
+def resolve_module(obj):
+    module = obj.__module__
     if module == '__main__':
         import __main__
         module = __main__.__spec__.name
-    ns = f'{module}.{func_name}'
+    return module
+
+
+def get_name_module(obj):
+    name = obj.__name__
+    module = resolve_module(obj)
+    return {'name': name, 'module': module}
+
+
+def get_func_ns(func):
+    info = get_name_module(func)
+    ns = '{module}.{name}'.format(**info)
     return ns
 
 
