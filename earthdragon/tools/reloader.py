@@ -3,6 +3,15 @@ import importlib
 
 
 def reimport(obj):
+    """
+    Reimport module.
+
+    Can take in module path as a string so you can pre-reload the module.
+    ```
+    reimport("bob.subbob")
+    from bob.subob import bob3
+    ```
+    """
     if isinstance(obj, (str, types.ModuleType)):
         module = reimport_module(obj)
         return module
