@@ -22,6 +22,8 @@ def reimport(obj):
     if hasattr(obj, '__module__'):
         name = obj.__name__
         module = reimport_module(obj.__module__)
+        # TODO consider modifying the obj in the calling namespace directly
+        # using inspect.stack()
         return getattr(module, name)
 
     raise Exception(f"Don't know how to reimport {obj}")
