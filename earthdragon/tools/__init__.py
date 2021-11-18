@@ -3,6 +3,7 @@ from itertools import cycle, islice, chain
 from .follow import Follow
 from .trace import trace
 from .timer import Timer
+from .reloader import reimport
 try:
     import line_profiler
 except ImportError:
