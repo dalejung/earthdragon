@@ -107,7 +107,8 @@ def test_pos_arg_with_kw():
 
 
 def test_full_platter():
-    def full_platter(a, b, /, *rolledup, c=None, secret='shh', **rolledupkwargs):
+    def full_platter(a, b, /, *rolledup, c=None, secret='shh',
+                     **rolledupkwargs):
         return a, b
 
     inv = get_invoked_args(full_platter, 1, 2, 3, 4, c='c', bob=1, howdy=False)
