@@ -86,19 +86,26 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
         argspec = get_argspec(argspec)
 
     # we're assuming self is not in *args for method calls
-    args_names = argspec.args
+    args_names = argspec.args.copy()
     if len(args_names) > 0 and args_names[0] == 'self':
         args_names = args_names[1:]
-
-    scope = SetOnceDict()
-    # consume the (a, b, c) portion
-    realized_args = dict(zip(args_names, args))
-    scope.update(realized_args)
 
     if len(args) > len(args_names) and argspec.varargs is None:
         raise TypeError("too many positional arguments")
 
-    # fill in kw args
+    scope = SetOnceDict()
+
+    # NOTE: that zip will only return pairs where we have both values.
+    # Mismatch can happen for 2 valid reason:
+    # 1. We are missing args because some were defined via **kwargs
+    # 2. We have more args that will be overflow into *args.
+    realized_args = dict(zip(args_names, args))
+    scope.update(realized_args)
+
+    # leftover pos args to be consumed.
+    leftover_args_names = args_names[len(args):]
+
+    # positional args can be filled via k=v.
     for k in list(kwargs.keys()):
         if k not in args_names:
             continue
@@ -108,18 +115,22 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
             raise TypeError(f"got multiple values for {k}")
 
         scope[k] = kwargs.pop(k)
+        leftover_args_names.remove(k)
 
-    # fill in the args default
-    if len(args_names) > len(args):
+
+    # Fill in args defaults. This only exists when functions are only args and
+    # defaulted kw args.
+    if len(leftover_args_names) > 0:
         default_args = dict(
             zip(
-                reversed(args_names),
+                reversed(leftover_args_names),
                 reversed(argspec.defaults)
             )
         )
         for k in default_args:
             if k not in scope:
                 scope[k] = default_args[k]
+
 
     # leftover args into starargs
     if argspec.varargs is not None:

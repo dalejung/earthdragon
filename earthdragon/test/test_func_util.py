@@ -1,9 +1,13 @@
 import pytest # noqa
 
+from earthdragon.tools.reloader import reimport
+reimport('earthdragon.func_util')
 from ..func_util import (
     get_invoked_args,
     get_func_ns,
     make_cell,
+    get_argspec,
+    SetOnceDict,
 )
 
 from . import util
@@ -88,3 +92,33 @@ def test_get_invoked_args_multiple_values():
 
     with pytest.raises(TypeError):
         get_invoked_args(invoker, 1, 2, 3, c=5)
+
+
+def test_pos_arg_with_kw():
+    """
+    This is to test when a pos arg is invokved via kw. This makes *args smaller
+    than argspec.args which has to be handled.
+    """
+    def kwonly_test(a, b, *rollupargs, c=None):
+        return locals()
+
+    inv = get_invoked_args(kwonly_test, 1, b='b', c=3)
+    assert inv == {'a': 1, 'b': 'b', 'c': 3, 'rollupargs': ()}
+
+
+def test_full_platter():
+    def full_platter(a, b, /, *rolledup, c=None, secret='shh', **rolledupkwargs):
+        return a, b
+
+    inv = get_invoked_args(full_platter, 1, 2, 3, 4, c='c', bob=1, howdy=False)
+    assert inv == {
+        'a': 1,
+        'b': 2,
+        'rolledup': (3, 4),
+        'c': 'c',
+        'secret': 'shh',
+        'rolledupkwargs': {
+            'bob': 1,
+            'howdy': False,
+        }
+    }
