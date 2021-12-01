@@ -123,3 +123,28 @@ def test_full_platter():
             'howdy': False,
         }
     }
+
+
+def test_arglist_order():
+    def invoker(a, b, c=3):
+        return a, b, c
+
+    with pytest.raises(ValueError,
+                       match="Unspecified args must be at end of arglist"):
+        get_invoked_args(invoker, 1, c=5)
+
+
+def test_defaulted_args():
+    def defaulted_kw(hi=1):
+        pass
+
+    inv_args = get_invoked_args(defaulted_kw)
+    assert inv_args == {'hi': 1}
+
+
+def test_missing_args():
+    def invoker(a, b, c=3):
+        return a, b, c
+    with pytest.raises(ValueError,
+                       match="Not enough args passed in."):
+        get_invoked_args(invoker, 1)

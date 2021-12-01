@@ -117,10 +117,19 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
         scope[k] = kwargs.pop(k)
         leftover_args_names.remove(k)
 
+    # if we have remaining args_names and haven't consumed everything, then
+    remaining_args = argspec.args[len(leftover_args_names) + 1:]
+    if len(leftover_args_names) > 0 and len(remaining_args) > 0 \
+       and remaining_args != leftover_args_names:
+        raise ValueError((
+            "Unspecified args must be at end of arglist. "
+            f"leftover_args_names: {leftover_args_names}. "
+            f"argspec.args: {argspec.args[len(leftover_args_names) + 1:]}"
+        ))
 
     # Fill in args defaults. This only exists when functions are only args and
     # defaulted kw args.
-    if len(leftover_args_names) > 0:
+    if len(leftover_args_names) > 0 and argspec.defaults is not None:
         default_args = dict(
             zip(
                 reversed(leftover_args_names),
@@ -130,7 +139,13 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
         for k in default_args:
             if k not in scope:
                 scope[k] = default_args[k]
+                leftover_args_names.remove(k)
 
+    if len(leftover_args_names) > 0:
+        if argspec.varargs is None:
+            raise ValueError(
+                f"Not enough args passed in. Missing: {leftover_args_names}"
+            )
 
     # leftover args into starargs
     if argspec.varargs is not None:
