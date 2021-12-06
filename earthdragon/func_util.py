@@ -86,6 +86,8 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
         argspec = get_argspec(argspec)
 
     # we're assuming self is not in *args for method calls
+    # TODO: This isn't a great solution tbh. Need to rethink this.
+    # Sometimes I want self returned as part of invokved args.
     args_names = argspec.args.copy()
     if len(args_names) > 0 and args_names[0] == 'self':
         args_names = args_names[1:]
