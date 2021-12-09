@@ -1,8 +1,6 @@
 import logging
 import inspect
 
-from .func_util import resolve_module
-
 
 def get_logger_name(depth=2):
     frm = inspect.stack()[depth]
