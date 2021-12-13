@@ -11,5 +11,6 @@ setup(
         'asttools',
         'toolz',
         'typeguard',
+        'more_itertools',
     ]
 )

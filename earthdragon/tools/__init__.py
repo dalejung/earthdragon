@@ -1,4 +1,5 @@
 from itertools import cycle, islice, chain
+import more_itertools
 
 from .follow import Follow
 from .trace import trace
@@ -49,4 +50,4 @@ def windowed(iterable, stride=2):
     """
     list(windowed(range(5))) -> [(0, 1), (1, 2), (2, 3), (3, 4)]
     """
-    return zip(*[islice(iterable, i, None) for i in range(stride)])
+    return more_itertools.windowed(iterable, n=stride)
