@@ -259,3 +259,17 @@ def get_class_that_defined_method(meth):
 
     # handle special descriptor objects
     return getattr(meth, '__objclass__', None)
+
+
+def isclassmethod(meth):
+    if not inspect.ismethod(meth):
+        return False
+    bound_to = getattr(meth, '__self__', None)
+    # check if bound to a class object.
+    return type(bound_to) == type
+
+
+def isalambda(v):
+    # https://stackoverflow.com/a/3655857/376837
+    LAMBDA = lambda: 0  # noqa: E731
+    return isinstance(v, type(LAMBDA)) and v.__name__ == LAMBDA.__name__
