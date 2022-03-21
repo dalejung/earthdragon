@@ -130,7 +130,7 @@ def test_arglist_order():
         return a, b, c
 
     with pytest.raises(ValueError,
-                       match="Unspecified args must be at end of arglist"):
+                       match="Not enough args passed in"):
         get_invoked_args(invoker, 1, c=5)
 
 
@@ -148,3 +148,11 @@ def test_missing_args():
     with pytest.raises(ValueError,
                        match="Not enough args passed in."):
         get_invoked_args(invoker, 1)
+
+
+def test_func_with_defaults():
+    def howdy(a, b='b', c='c', **kwargs):
+        pass
+
+    inv = get_invoked_args(howdy, 1, c=3, howdy='hi')
+    assert inv == {'a': 1, 'c': 3, 'b': 'b', 'kwargs': {'howdy': 'hi'}}
