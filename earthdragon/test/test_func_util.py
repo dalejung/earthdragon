@@ -33,6 +33,17 @@ def test_func_ns():
     func_ns = get_func_ns(make_cell)
     assert func_ns == 'earthdragon.func_util.make_cell'
 
+    class CallableClass:
+        def __init__(self, ret):
+            self.ret = ret
+
+        def __call__(self):
+            return self.ret
+
+    cc = CallableClass(1)
+    ns = get_func_ns(cc)
+    assert ns == 'earthdragon.test.test_func_util.CallableClass'
+
 
 def test_get_invoked_args_nodefaults():
     def invoker(a, b):

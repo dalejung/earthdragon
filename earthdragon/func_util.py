@@ -35,7 +35,9 @@ def resolve_module(obj):
 
 
 def get_name_module(obj):
-    name = obj.__name__
+    name = getattr(obj, '__name__', None)
+    if name is None and hasattr(obj, '__class__'):
+        name = obj.__class__.__name__
     module = resolve_module(obj)
     return {'name': name, 'module': module}
 
