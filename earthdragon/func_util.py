@@ -8,6 +8,7 @@ from typing import Union, Callable, Any
 from .typecheck import typecheck
 from .container import SetOnceDict
 
+from module_name.resolve import get_module_name
 
 try:
     _get_argspec = inspect.getfullargspec
@@ -30,7 +31,13 @@ def resolve_module(obj):
     module = obj.__module__
     if module == '__main__':
         import __main__
-        module = __main__.__spec__.name
+        if hasattr(__main__, '__spec__'):
+            # handles python -m pkg.module
+            module = __main__.__spec__.name
+        else:
+            # handles python /pkg/module.py
+            # Note this assumes that the module is still within a package.
+            module = get_module_name(__main__.__file__)
     return module
 
 
