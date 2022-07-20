@@ -167,3 +167,19 @@ def test_func_with_defaults():
 
     inv = get_invoked_args(howdy, 1, c=3, howdy='hi')
     assert inv == {'a': 1, 'c': 3, 'b': 'b', 'kwargs': {'howdy': 'hi'}}
+
+
+def test_invovked_args_methods():
+    class Bob:
+        def sing(self, song):
+            return song
+
+    b = Bob()
+    inv = get_invoked_args(b.sing, 'Final Countdown')
+    assert inv['self'] is b
+    assert inv['song'] == 'Final Countdown'
+
+    argspec = get_argspec(b.sing)
+    inv2 = get_invoked_args(argspec, b, 'Final Countdown')
+    assert inv2['self'] is b
+    assert inv2['song'] == 'Final Countdown'

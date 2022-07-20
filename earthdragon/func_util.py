@@ -91,15 +91,15 @@ def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
     Based on a functions argspec, figure out what the resultant function
     scope would be based on variables passed in
     """
+    # If we are passed in a method, prepend the self var args.
+    if isinstance(argspec, types.MethodType):
+        self_obj = argspec.__self__
+        args = [self_obj, *args]
+
     if not isinstance(argspec, argspec_type):
         argspec = get_argspec(argspec)
 
-    # we're assuming self is not in *args for method calls
-    # TODO: This isn't a great solution tbh. Need to rethink this.
-    # Sometimes I want self returned as part of invokved args.
     args_names = argspec.args.copy()
-    if len(args_names) > 0 and args_names[0] == 'self':
-        args_names = args_names[1:]
 
     if len(args) > len(args_names) and argspec.varargs is None:
         raise TypeError("too many positional arguments")
@@ -272,3 +272,19 @@ def isalambda(v):
     # https://stackoverflow.com/a/3655857/376837
     LAMBDA = lambda: 0  # noqa: E731
     return isinstance(v, type(LAMBDA)) and v.__name__ == LAMBDA.__name__
+
+
+if __name__ == '__main__':
+    class Bob:
+        def sing(self, song):
+            return song
+
+    b = Bob()
+    inv = get_invoked_args(b.sing, 'Final Countdown')
+    assert inv['self'] is b
+    assert inv['song'] == 'Final Countdown'
+
+    argspec = get_argspec(b.sing)
+    inv2 = get_invoked_args(argspec, b, 'Final Countdown')
+    assert inv2['self'] is b
+    assert inv2['song'] == 'Final Countdown'
