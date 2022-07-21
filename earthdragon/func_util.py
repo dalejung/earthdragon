@@ -274,6 +274,65 @@ def isalambda(v):
     return isinstance(v, type(LAMBDA)) and v.__name__ == LAMBDA.__name__
 
 
+def _empty(obj):
+    if obj is None:
+        return True
+
+    if isinstance(obj, (list, tuple, dict)):
+        return len(obj) == 0
+
+    if isinstance(obj, bool):
+        return not obj
+
+    if isinstance(obj, str):
+        return not obj
+
+    raise TypeError(f"{obj} is not empty checkable")
+
+
+def convert_argspec_to_dict(argspec):
+    """
+    Util func to only extract non empty argspec keys into a dict.
+    """
+    argdict = argspec._asdict()
+    argdict = {k: v for k, v in argdict.items() if not _empty(v)}
+    return argdict
+
+
+def get_class_from_unbound(func):
+    cls = None
+    class_name = func.__qualname__
+    class_name = class_name.replace('.<locals>', '')
+    bits = class_name.split('.')
+    if len(bits) <= 1:
+        return
+
+    # assume last item is method name.
+    class_name = bits[-2]
+    try:
+        cls = getattr(inspect.getmodule(func), class_name)
+    except AttributeError:
+        cls = func.__globals__.get(class_name)
+
+    # only return for classes. Could be factory method.
+    if isinstance(cls, type):
+        return cls
+
+    # Assume class was made in a factory i.e.
+    # def factory():
+    #     class Bob:
+    #         def method(self):
+    #             return None
+    #     return Bob
+    # Special case this by just returning the class name.
+    # TODO: Actually Bob can also be a function. And since we don't have access
+    # to it there isn't a way to check what type it was ...
+    # So perhaps blacklist any functions with nested qualnames? Force them
+    # to be top level?
+    if cls is None and len(bits) >= 3:
+        return class_name
+
+
 if __name__ == '__main__':
     class Bob:
         def sing(self, song):
@@ -285,6 +344,5 @@ if __name__ == '__main__':
     assert inv['song'] == 'Final Countdown'
 
     argspec = get_argspec(b.sing)
-    inv2 = get_invoked_args(argspec, b, 'Final Countdown')
-    assert inv2['self'] is b
-    assert inv2['song'] == 'Final Countdown'
+    argdict = convert_argspec_to_dict(argspec)
+    assert argdict == {'args': ['self', 'song']}

@@ -1,16 +1,17 @@
 import pytest # noqa
 
-from earthdragon.tools.reloader import reimport
-reimport('earthdragon.func_util')
 from ..func_util import (
     get_invoked_args,
     get_func_ns,
     make_cell,
     get_argspec,
     SetOnceDict,
+    get_class_from_unbound,
+    convert_argspec_to_dict,
 )
 
 from . import util
+
 util.preamble()
 
 
@@ -183,3 +184,23 @@ def test_invovked_args_methods():
     inv2 = get_invoked_args(argspec, b, 'Final Countdown')
     assert inv2['self'] is b
     assert inv2['song'] == 'Final Countdown'
+
+    argdict = convert_argspec_to_dict(argspec)
+    assert argdict == {'args': ['self', 'song']}
+
+
+def test_fingerprint_unbounded_method():
+    class ClassExample2:
+        @classmethod
+        def cls_method(cls, obj):
+            return obj
+
+        def regular_method(self, obj):
+            return obj
+
+    assert get_class_from_unbound(ClassExample2.regular_method) == 'ClassExample2'
+    assert get_class_from_unbound(ClassExample2.cls_method) == 'ClassExample2'
+
+
+if __name__ == '__main__':
+    pass
