@@ -53,7 +53,7 @@ def test_timer_set():
         time.sleep(0.001 * x)
         x += 1
 
-    timerset = Timer.run_set(sleep_more, n=10)
+    timerset = Timer.repeat(sleep_more, n=10)
     assert timerset.max_timer is timerset.timers[-1]
     assert timerset.min_timer is timerset.timers[0]
     assert timerset.min < 0.002

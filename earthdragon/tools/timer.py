@@ -98,7 +98,7 @@ class Timer:
         return self.wall_interval > other.wall_interval
 
     @classmethod
-    def run_set(cls, func, n=3):
+    def repeat(cls, func, n=3):
         timers = []
         for x in range(n):
             with cls(verbose=False) as t:
