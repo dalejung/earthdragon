@@ -1,8 +1,10 @@
 import time
 import sys
 import math
+from functools import total_ordering
 
 
+@total_ordering
 class Timer:
     """
         Usage:
@@ -43,26 +45,38 @@ class Timer:
     def msg(self):
         msg = "Run {name}: CPU time: {interval}  Wall time: {wall_interval}"
         return msg.format(name=self.name, interval=format_time(self.interval),
-                         wall_interval=format_time(self.wall_interval))
+                          wall_interval=format_time(self.wall_interval))
 
     def __str__(self):
         return self.msg
 
     def __repr__(self):
+        name = self.name
+
         if self.start is None:
-            return "Timer(name={name})".format(**self.__dict__)
-        msg = "Timer(name={name}, interval={interval},wall_interval={wall_interval})"
-        return msg.format(**self.__dict__)
+            return f"Timer({name=})"
+
+        interval = self.interval
+        wall_interval = self.wall_interval
+        return f"Timer({name=}, {interval=}, {wall_interval=})"
 
     @property
     def wall_interval_string(self):
         return format_time(self.wall_interval)
+
+    def __eq__(self, other):
+        return self.wall_interval == other.wall_interval
+
+    def __gt__(self, other):
+        return self.wall_interval > other.wall_interval
+
 
 # grabbed from IPython/core/magics/execution.py
 def format_time(timestamp, precision=3, tmpl=None):
     if tmpl is None:
         tmpl = f"{{0:.{precision}g}}{{1}}"
     return " ".join(map(lambda x: tmpl.format(*x), _format_time(timestamp)))
+
 
 def _format_time(timespan):
     """
@@ -97,7 +111,7 @@ def _format_time(timespan):
         try:
             '\xb5'.encode(sys.stdout.encoding)
             units = ['s', 'ms', '\xb5s', 'ns']
-        except:
+        except Exception:
             pass
     scaling = [1, 1e3, 1e6, 1e9]
 

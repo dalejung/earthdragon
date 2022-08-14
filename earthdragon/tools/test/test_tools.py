@@ -1,7 +1,9 @@
+import time
 import pytest
 
 from .. import (
-    windowed
+    windowed,
+    Timer,
 )
 
 
@@ -18,3 +20,15 @@ def test_windowed():
         ((2, 2), (3, 3)),
         ((3, 3), (4, 4))
     ]
+
+
+def test_timer():
+    with Timer() as t1:
+        time.sleep(0.01)
+
+    with Timer() as t2:
+        time.sleep(0.02)
+
+    assert t2 > t1
+    assert t1 < t2
+    assert t1 != t2
