@@ -32,3 +32,14 @@ def test_timer():
     assert t2 > t1
     assert t1 < t2
     assert t1 != t2
+
+    with Timer() as t3:
+        time.sleep(0.03)
+
+    timers = [t1, t2, t3]
+
+    max_t = max(timers)
+    assert max_t is t3
+
+    min_t = min(timers)
+    assert min_t is t1
