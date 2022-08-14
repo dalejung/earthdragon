@@ -4,6 +4,33 @@ import math
 from functools import total_ordering
 
 
+class TimerSet:
+    def __init__(self, timers):
+        self.timers = timers
+
+    @property
+    def max_timer(self):
+        return max(self.timers)
+
+    @property
+    def max(self):
+        return self.max_timer.wall_interval
+
+    @property
+    def min_timer(self):
+        return min(self.timers)
+
+    @property
+    def min(self):
+        return self.min_timer.wall_interval
+
+    def __repr__(self):
+        n = len(self.timers)
+        min = self.min
+        max = self.max
+        return f"TimerSet({n=}, {min=}, {max=})"
+
+
 @total_ordering
 class Timer:
     """
@@ -69,6 +96,18 @@ class Timer:
 
     def __gt__(self, other):
         return self.wall_interval > other.wall_interval
+
+    @classmethod
+    def run_set(cls, func, n=3):
+        timers = []
+        for x in range(n):
+            with cls(verbose=False) as t:
+                func()
+
+            timers.append(t)
+
+        return TimerSet(timers)
+
 
 
 # grabbed from IPython/core/magics/execution.py

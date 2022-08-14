@@ -43,3 +43,18 @@ def test_timer():
 
     min_t = min(timers)
     assert min_t is t1
+
+
+def test_timer_set():
+    x = 1
+
+    def sleep_more():
+        nonlocal x
+        time.sleep(0.001 * x)
+        x += 1
+
+    timerset = Timer.run_set(sleep_more, n=10)
+    assert timerset.max_timer is timerset.timers[-1]
+    assert timerset.min_timer is timerset.timers[0]
+    assert timerset.min < 0.002
+    assert timerset.max > 0.01
