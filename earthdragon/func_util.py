@@ -31,7 +31,7 @@ def resolve_module(obj):
     module = obj.__module__
     if module == '__main__':
         import __main__
-        if hasattr(__main__, '__spec__'):
+        if getattr(__main__, '__spec__', False):
             # handles python -m pkg.module
             module = __main__.__spec__.name
         else:
