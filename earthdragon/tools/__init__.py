@@ -1,19 +1,23 @@
-from itertools import cycle, islice, chain
+from itertools import (
+    cycle,
+    islice,
+)
 import more_itertools
 
-from .follow import Follow
-from .trace import trace
-from .timer import Timer
-from .reloader import reimport
+from .follow import Follow as Follow
+from .trace import trace as trace
+from .timer import Timer as Timer
+from .reloader import reimport as reimport
+
 try:
-    import line_profiler
+    import line_profiler   # noqa: F401
 except ImportError:
     pass
 else:
     from .profiler import Profiler
 
 try:
-    import ipdb
+    import ipdb   # noqa: F401
 except ImportError:
     pass
 else:
@@ -51,3 +55,17 @@ def windowed(iterable, stride=2):
     list(windowed(range(5))) -> [(0, 1), (1, 2), (2, 3), (3, 4)]
     """
     return more_itertools.windowed(iterable, n=stride)
+
+
+__all__ = [
+    'roundrobin',
+    'chunker',
+    'flatten',
+    'windowed',
+    'Profiler',
+    'reimport',
+    'Follow',
+    'trace',
+    'Timer',
+    'DebugTrace',
+]
