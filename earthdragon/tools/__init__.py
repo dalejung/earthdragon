@@ -1,6 +1,7 @@
 from itertools import (
     cycle,
     islice,
+    chain,
 )
 import more_itertools
 
@@ -57,7 +58,12 @@ def windowed(iterable, stride=2):
     return more_itertools.windowed(iterable, n=stride)
 
 
+def merge_dicts(*dict_args):
+    return dict(chain.from_iterable(d.items() for d in dict_args))
+
+
 __all__ = [
+    'merge_dicts',
     'roundrobin',
     'chunker',
     'flatten',
