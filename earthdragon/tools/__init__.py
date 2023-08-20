@@ -1,3 +1,4 @@
+import operator
 from itertools import (
     cycle,
     islice,
@@ -62,6 +63,10 @@ def merge_dicts(*dict_args):
     return dict(chain.from_iterable(d.items() for d in dict_args))
 
 
+def rindex(lst, value):
+    return len(lst) - operator.indexOf(reversed(lst), value) - 1
+
+
 __all__ = [
     'merge_dicts',
     'roundrobin',
@@ -74,4 +79,5 @@ __all__ = [
     'trace',
     'Timer',
     'DebugTrace',
+    'rindex',
 ]

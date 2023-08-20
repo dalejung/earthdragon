@@ -8,10 +8,12 @@ setup(
     version=FULLVERSION,
     packages=['earthdragon'],
     install_requires=[
-        'asttools',
+        # 'asttools',
         'toolz',
         'typeguard',
         'more_itertools',
         'module_name',
+        'frozendict',
+        'line_profiler',
     ]
 )
