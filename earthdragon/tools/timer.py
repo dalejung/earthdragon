@@ -40,9 +40,12 @@ class Timer:
             ret = func(df)
         print(t.interval)
     """
+    name: str
     runs = []
 
-    def __init__(self, name='noname', verbose=True):
+    def __init__(self, name: str | None = None, verbose=True):
+        if name is None:
+            name = 'noname'
         self.name = name
         self.verbose = verbose
         self.start = None
@@ -62,6 +65,8 @@ class Timer:
     def __exit__(self, *args):
         self.end = time.process_time()
         self.wall_end = time.perf_counter()
+        assert self.start is not None
+        assert self.wall_start is not None
         self.interval = self.end - self.start
         self.wall_interval = self.wall_end - self.wall_start
 
@@ -70,9 +75,11 @@ class Timer:
 
     @property
     def msg(self):
-        msg = "Run {name}: CPU time: {interval}  Wall time: {wall_interval}"
-        return msg.format(name=self.name, interval=format_time(self.interval),
-                          wall_interval=format_time(self.wall_interval))
+        name = self.name
+        interval = self.interval_formatted
+        wall_interval = self.wall_interval_formatted
+        msg = f"Run {name}: CPU time: {interval}  Wall time: {wall_interval}"
+        return msg
 
     def __str__(self):
         return self.msg
@@ -88,7 +95,11 @@ class Timer:
         return f"Timer({name=}, {interval=}, {wall_interval=})"
 
     @property
-    def wall_interval_string(self):
+    def interval_formatted(self):
+        return format_time(self.interval)
+
+    @property
+    def wall_interval_formatted(self):
         return format_time(self.wall_interval)
 
     def __eq__(self, other):
@@ -107,7 +118,6 @@ class Timer:
             timers.append(t)
 
         return TimerSet(timers)
-
 
 
 # grabbed from IPython/core/magics/execution.py
