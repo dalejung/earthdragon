@@ -4,8 +4,10 @@ from inspect import classify_class_attrs, getclosurevars
 
 from .func_util import replace_class_closure
 
+
 def init_name(mixin):
     return '__init_{mixin_name}'.format(mixin_name=mixin.__name__)
+
 
 def class_attrs(cls):
     """
@@ -16,13 +18,15 @@ def class_attrs(cls):
     excluding any attribute inherited from object.
     """
     attrs = classify_class_attrs(cls)
-    not_object_defined = lambda attr: attr.defining_class != object
-    non_object_attrs = filter(not_object_defined, attrs)
+    non_object_attrs = [
+        attr for attr in attrs if attr.defining_class != object
+    ]
     class_attr_dict = {}
     for attr in non_object_attrs:
         attr_dict = {name: getattr(attr, name) for name in attr._fields}
         class_attr_dict[attr.name] = attr_dict
     return class_attr_dict
+
 
 def get_bindable(obj, base):
     """
@@ -41,6 +45,7 @@ def get_bindable(obj, base):
         obj = replace_class_closure(obj, base)
     return obj
 
+
 def set_class_attr(base, name, attr):
     """
     attr : dict of inspect.Attribute
@@ -48,6 +53,7 @@ def set_class_attr(base, name, attr):
     """
     obj = get_bindable(attr, base)
     setattr(base, name, obj)
+
 
 def _get_name(obj, attr):
     """
@@ -60,10 +66,11 @@ def _get_name(obj, attr):
     attr = isinstance(attr, types.MethodType) and attr.__func__ or attr
     for class_ in cls.__mro__:
         classdict = class_.__dict__
-        for k,v in classdict.items():
+        for k, v in classdict.items():
             if v is attr:
                 return k
-    raise Exception("Could not find name for attr {attr}".format(attr=str(attr)))
+    raise Exception(f"Could not find name for attr {attr}")
+
 
 def get_unbounded_super(obj, method):
     """
@@ -90,11 +97,43 @@ def get_unbounded_super(obj, method):
         obj_method = cls.__dict__.get(method)
     else:
         name = _get_name(obj, method)
-        obj_method = isinstance(method, types.MethodType) and method.__func__ or method
+        obj_method = (
+            isinstance(method, types.MethodType)
+            and method.__func__
+            or method
+        )
 
+    base = None
+    super_method = None
     for base in cls.mro()[1:]:
         super_method = getattr(base, name, None)
         if super_method is not obj_method and super_method is not None:
             break
+
     return base, super_method
 
+
+def mro_until(
+    obj,
+    module_stop=None,
+    anchor_tag=None,
+    stop_at=None,
+):
+    """
+    """
+    mro = []
+
+    for base in obj.__mro__:
+        module_name = base.__module__
+        if module_stop and module_name.startswith(module_stop):
+            break
+
+        if base is stop_at:
+            break
+
+        mro.append(base)
+
+        if anchor_tag and base.__dict__.get(anchor_tag, False):
+            break
+
+    return mro
