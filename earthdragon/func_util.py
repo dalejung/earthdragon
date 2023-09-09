@@ -34,7 +34,7 @@ def resolve_module(obj):
         if getattr(__main__, '__spec__', False):
             # handles python -m pkg.module
             module = __main__.__spec__.name
-        else:
+        elif hasattr(__main__, '__file__'):
             # handles python /pkg/module.py
             # Note this assumes that the module is still within a package.
             module = get_module_name(__main__.__file__)
