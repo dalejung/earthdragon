@@ -10,10 +10,6 @@ from ..func_util import (
     convert_argspec_to_dict,
 )
 
-from . import util
-
-util.preamble()
-
 
 # here to test get_func_ns
 def fake_func():

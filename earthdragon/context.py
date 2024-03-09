@@ -1,11 +1,14 @@
 from contextlib import contextmanager
 import inspect
+
 from asttools import reload_locals
+
 
 @contextmanager
 def section(*args):
     """ just a dummy contextmanager. using it for doc """
     yield
+
 
 class WithScope(object):
     """
@@ -63,9 +66,10 @@ class WithScope(object):
         Restores scope to original state. Note, new variables defined
         within `with` block will persist.
         """
-        new_scope = self.scope
+        new_scope = self.frame.f_locals
+
         for k, old_v in self.original.items():
-            new_v = new_scope.setdefault(k, old_v) # will restore deletes
+            new_v = new_scope.setdefault(k, old_v)  # will restore deletes
             # i think we'd be fine just resetting all items, but
             # only changing modified vars back
             if new_v is not old_v:
@@ -93,3 +97,16 @@ class WithScope(object):
 
         if self.exit_handler:
             self.exit_handler(self, out)
+
+
+if __name__ == '__main__':
+    def meh():
+        out = {}
+        with WithScope(out):
+            dale = 123
+
+        l = locals()
+        return l
+
+    l = meh()
+    print(l)

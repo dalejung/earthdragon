@@ -5,7 +5,6 @@ import functools
 
 from typing import Union, Callable, Any
 
-from .typecheck import typecheck
 from .container import SetOnceDict
 
 from module_name.resolve import get_module_name
@@ -84,7 +83,6 @@ def replace_class_closure(func, class_):
     return new_func
 
 
-@typecheck
 def get_invoked_args(argspec: Union[argspec_type, Callable[..., Any]],
                      *args, **kwargs):
     """

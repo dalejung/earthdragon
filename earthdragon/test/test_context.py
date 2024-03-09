@@ -27,7 +27,11 @@ class WithScopeTest(unittest.TestCase):
         assert out['new_vars']['bob'] is not bob
 
         # dale should be removed
-        assert 'dale' not in locals()
+        # 3.12 seems to have changed behavior to where it sets it as None?
+        # RuntimeWarning: assigning None to unbound local 'dale'
+        #   ctypes.pythonapi.PyFrame_LocalsToFast(
+
+        assert locals()['dale'] is None
         assert bob is orig_bob
 
     def test_exit_handler(self):

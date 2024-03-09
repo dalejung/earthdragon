@@ -10,7 +10,6 @@ setup(
     install_requires=[
         # 'asttools',
         'toolz',
-        'typeguard',
         'more_itertools',
         'module_name',
         'frozendict',
